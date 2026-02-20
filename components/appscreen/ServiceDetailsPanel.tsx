@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeftIcon } from "lucide-react";
+import type { DashboardSummary } from "@/lib/api/backend-api";
 
 interface ServiceDetailsPanelProps {
   service: string;
-  summary: any;
+  summary: DashboardSummary | null;
   onBack: () => void;
 }
 
