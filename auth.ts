@@ -4,7 +4,7 @@ import GoogleProvider from "next-auth/providers/google"
 const BACKEND_URL = (
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_BACKEND_URL ||
-  "http://localhost:8001"
+  "http://localhost:9000"
 ).replace(/\/$/, "")
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
