@@ -22,6 +22,7 @@ export type App = {
   user_id: string
   name: string
   description: string | null
+  url?: string | null
   api_key: string
   created_at: string
   updated_at: string
@@ -150,7 +151,7 @@ class BackendAPI {
   }
 
   /** Get a single app (must belong to the authenticated user). */
-  async getApp(appId: string, userId: string): Promise<App> {
+  async getApp(appId: string, userId?: string): Promise<App> {
     return this.request<App>(`/apps/${appId}`, { userId })
   }
 
@@ -221,6 +222,30 @@ class BackendAPI {
 
   async healthCheck(): Promise<{ status: string }> {
     return this.request("/health")
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // Demo app helpers (used by LogRatiosPopover in example app)
+  // ──────────────────────────────────────────────────────────
+
+  /** Update log error ratios on the demo backend (example app only). */
+  async updateDemoLogRatios(ratios: {
+    api: number
+    auth: number
+    inventory: number
+    notification: number
+    payment: number
+  }): Promise<unknown> {
+    const demoUrl = (
+      process.env.NEXT_PUBLIC_DEMO_BACKEND_URL || "http://localhost:8000"
+    ).replace(/\/$/, "")
+    const response = await fetch(`${demoUrl}/logs/ratios`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(ratios),
+    })
+    if (!response.ok) throw new Error("Failed to update log ratios")
+    return response.json()
   }
 }
 
