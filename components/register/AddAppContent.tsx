@@ -50,19 +50,19 @@ export function AddAppContent() {
     }
     
     try {
-      const data: any = await backendAPI.createApp({
-        user_id: session.user.id,
-        name: name.trim(),
-        description: description.trim() || undefined,
-      })
+      const data = await backendAPI.createApp(
+        { name: name.trim(), description: description.trim() || undefined },
+        session.user.id
+      )
       setSuccess(true)
       setCreatedApp({ id: data.id, name: data.name, api_key: data.api_key })
       setName("")
       setDescription("")
       toast.success("App registered successfully! Copy your API key below.")
-    } catch (err: any) {
-      setError(err.message)
-      toast.error(`${err.message}`)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error"
+      setError(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -75,7 +75,7 @@ export function AddAppContent() {
     }
   }
 
-  const ingestBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:9000"
+  const ingestBase = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8001").replace(/\/$/, "")
 
   return (
     <div className="flex flex-col items-center justify-center flex-1 px-6 py-10 bg-gradient-to-b from-black via-zinc-950 to-black">
