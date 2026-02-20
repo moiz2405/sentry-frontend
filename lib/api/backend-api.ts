@@ -1,5 +1,5 @@
 /**
- * Backend API Client
+ *const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:9000';Backend API Client
  * 
  * All frontend API calls go through this utility.
  * Frontend does NOT access Supabase - only the backend API.
