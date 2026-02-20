@@ -19,7 +19,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { IconFolderCode } from "@tabler/icons-react";
-import { backendAPI, type App, type DashboardSummary } from "@/lib/api/backend-api";
+import { backendAPI, type DashboardSummary } from "@/lib/api/backend-api";
 
 interface AppScreenProps {
   appId: string;
@@ -29,10 +29,8 @@ const POLL_INTERVAL_MS = 5000;
 
 export function AppScreen({ appId }: AppScreenProps) {
   const { data: session } = useSession();
-  const [appData, setAppData] = useState<App | null>(null);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [error, setError] = useState("");
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -41,25 +39,14 @@ export function AppScreen({ appId }: AppScreenProps) {
     if (!userId) return;
 
     setLoading(true);
-    setError("");
-    backendAPI
-      .getApp(appId, userId)
-      .then((data) => setAppData(data))
-      .catch(() => setError("Failed to fetch app details"))
-      .finally(() => setLoading(false));
-  }, [appId, session?.user?.id]);
-
-  useEffect(() => {
-    const userId = session?.user?.id;
-    if (!userId) return;
-
     function fetchSummary() {
       backendAPI
         .getSummary(appId, userId!)
         .then(({ summary: s }) => {
           if (s) setSummary(s);
+          setLoading(false);
         })
-        .catch(() => {});
+        .catch(() => setLoading(false));
     }
 
     fetchSummary();
@@ -71,18 +58,6 @@ export function AppScreen({ appId }: AppScreenProps) {
       }
     };
   }, [appId, session?.user?.id]);
-
-  if (loading || error) {
-    return (
-      <div className="w-full max-w-[1440px] px-2">
-        {error ? (
-          <div className="p-6 text-red-500">{error}</div>
-        ) : (
-          <div className="p-6 text-zinc-400">Loading...</div>
-        )}
-      </div>
-    );
-  }
 
   const atRiskCount = Array.isArray(summary?.at_risk_services)
     ? summary!.at_risk_services.length
@@ -96,8 +71,8 @@ export function AppScreen({ appId }: AppScreenProps) {
       >
         <ResizablePanel defaultSize={45} minSize={20}>
           <div className="relative flex flex-col h-[600px] md:h-[705px] items-start justify-start p-6 gap-4">
-            <h2 className="w-full text-3xl font-semibold tracking-tight text-left scroll-m-20 first:mt-0">
-              {appData?.name ?? "App Dashboard"}
+            <h2 className="w-full text-xl font-semibold tracking-tight text-left">
+              Active Microservices
             </h2>
             {atRiskCount > 0 ? (
               <div className="text-sm text-red-300">
