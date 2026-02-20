@@ -29,7 +29,7 @@ export function SiteHeader() {
   }, [pathname, segments, session?.user?.id]);
 
   const crumbs = [
-    { name: "Home", href: "/" },
+    { name: "Dashboard", href: "/dashboard" },
     ...segments.map((seg, idx) => {
       const href = "/" + segments.slice(0, idx + 1).join("/");
       // If segment is an appId and appName is available, use appName
