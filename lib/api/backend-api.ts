@@ -172,6 +172,11 @@ class BackendAPI {
     return this.request(`/apps/${appId}`, { method: "DELETE", userId })
   }
 
+  /** Rotate the API key for an app, invalidating the previous one. */
+  async rotateApiKey(appId: string, userId: string): Promise<{ api_key: string }> {
+    return this.request(`/apps/${appId}/rotate-key`, { method: "POST", userId })
+  }
+
   // ──────────────────────────────────────────────────────────
   // Logs
   // ──────────────────────────────────────────────────────────
