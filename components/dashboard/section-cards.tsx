@@ -160,7 +160,7 @@ export function SectionCards() {
                       className="flex items-center gap-1 cursor-pointer text-violet-400 hover:underline"
                       onClick={e => {
                         e.stopPropagation();
-                        window.open(app.url, '_blank', 'noopener,noreferrer');
+                        window.open(app.url ?? undefined, '_blank', 'noopener,noreferrer');
                       }}
                     >
                       Live Link <IconExternalLink className="size-4" />
