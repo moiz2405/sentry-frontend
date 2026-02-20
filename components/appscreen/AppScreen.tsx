@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
+import { useSession } from "next-auth/react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -18,7 +19,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { IconFolderCode } from "@tabler/icons-react";
-import { backendAPI } from "@/lib/api/backend-api";
+import { backendAPI, type App, type DashboardSummary } from "@/lib/api/backend-api";
 
 interface AppScreenProps {
   appId: string;
@@ -27,31 +28,36 @@ interface AppScreenProps {
 const POLL_INTERVAL_MS = 5000;
 
 export function AppScreen({ appId }: AppScreenProps) {
-  const [appData, setAppData] = useState<any>(null);
+  const { data: session } = useSession();
+  const [appData, setAppData] = useState<App | null>(null);
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<any>(null);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [error, setError] = useState("");
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
     setLoading(true);
     setError("");
     backendAPI
-      .getApp(appId)
+      .getApp(appId, userId)
       .then((data) => setAppData(data))
       .catch(() => setError("Failed to fetch app details"))
       .finally(() => setLoading(false));
-  }, [appId]);
+  }, [appId, session?.user?.id]);
 
   useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
     function fetchSummary() {
       backendAPI
-        .getSummary(appId)
-        .then((data: any) => {
-          if (data.summary) {
-            setSummary(data.summary);
-          }
+        .getSummary(appId, userId!)
+        .then(({ summary: s }) => {
+          if (s) setSummary(s);
         })
         .catch(() => {});
     }
@@ -64,7 +70,7 @@ export function AppScreen({ appId }: AppScreenProps) {
         pollRef.current = null;
       }
     };
-  }, [appId]);
+  }, [appId, session?.user?.id]);
 
   if (loading || error) {
     return (
@@ -79,7 +85,7 @@ export function AppScreen({ appId }: AppScreenProps) {
   }
 
   const atRiskCount = Array.isArray(summary?.at_risk_services)
-    ? summary.at_risk_services.length
+    ? summary!.at_risk_services.length
     : 0;
 
   return (
@@ -91,7 +97,7 @@ export function AppScreen({ appId }: AppScreenProps) {
         <ResizablePanel defaultSize={45} minSize={20}>
           <div className="relative flex flex-col h-[600px] md:h-[705px] items-start justify-start p-6 gap-4">
             <h2 className="w-full text-3xl font-semibold tracking-tight text-left scroll-m-20 first:mt-0">
-              Active Microservices
+              {appData?.name ?? "App Dashboard"}
             </h2>
             {atRiskCount > 0 ? (
               <div className="text-sm text-red-300">
@@ -122,11 +128,11 @@ export function AppScreen({ appId }: AppScreenProps) {
                         </EmptyDescription>
                       </EmptyHeader>
                     </Empty>
-                  ) : Array.isArray(summary?.services) ? (
+                  ) : Array.isArray(summary.services) ? (
                     <ServiceHealthCards
                       services={summary.services}
                       serviceHealth={summary.service_health}
-                      atRiskServices={summary.at_risk_services || []}
+                      atRiskServices={summary.at_risk_services ?? []}
                       onServiceClick={setSelectedService}
                     />
                   ) : null}
@@ -140,8 +146,8 @@ export function AppScreen({ appId }: AppScreenProps) {
           <div className="flex items-stretch justify-center flex-1 w-full h-full p-6">
             <ResponsiveChartWrapper>
               <ChartAreaInteractive
-                errorRates={summary?.errors_per_10_logs || []}
-                avgErrorRate={summary?.avg_errors_per_10_logs || 0}
+                errorRates={summary?.errors_per_10_logs ?? []}
+                avgErrorRate={summary?.avg_errors_per_10_logs ?? 0}
               />
             </ResponsiveChartWrapper>
           </div>
