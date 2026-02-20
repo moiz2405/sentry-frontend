@@ -14,7 +14,7 @@ function SdkLinkContent() {
   const [done, setDone] = useState(false);
 
   const backendBase = useMemo(
-    () => (process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:9000").replace(/\/$/, ""),
+    () => (process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8001").replace(/\/$/, ""),
     []
   );
 
@@ -43,7 +43,7 @@ function SdkLinkContent() {
       return;
     }
 
-    const userId = (session?.user as any)?.id as string | undefined;
+    const userId = session?.user?.id as string | undefined;
     if (!userId) {
       setState("error");
       setMessage("Logged in, but user id is missing.");
