@@ -77,8 +77,6 @@ export function AddAppContent() {
     }
   }
 
-  const ingestBase = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:9000").replace(/\/$/, "")
-
   return (
     <div className="flex flex-col items-center justify-center flex-1 px-6 py-10 bg-gradient-to-b from-black via-zinc-950 to-black">
       <div
@@ -123,15 +121,13 @@ export function AddAppContent() {
               </div>
             </div>
             <div className="p-4 rounded-xl bg-zinc-900/80 border border-zinc-700">
-              <p className="mb-2 text-sm font-medium text-zinc-400">Install the SDK in your FastAPI app</p>
+              <p className="mb-2 text-sm font-medium text-zinc-400">Add to your app</p>
               <pre className="p-3 text-xs font-mono overflow-x-auto rounded-lg bg-zinc-950 text-zinc-300">
 {`pip install sentry-logger
-# Or from repo: pip install ./sdk/python
 
-# In your FastAPI app (e.g. main.py):
+# In your app entry point:
 from sentry_logger import init
-init(api_key="${createdApp.api_key}", dsn="${ingestBase}")
-`}
+init(api_key="${createdApp.api_key}")`}
               </pre>
             </div>
             <div className="flex gap-3">
