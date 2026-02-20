@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, Suspense } from "react"
+import { useEffect, useState, Suspense, use } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -138,7 +138,8 @@ function TabButton({
   )
 }
 
-export default function AppDetailPage({ params }: { params: { appId: string } }) {
+export default function AppDetailPage({ params }: { params: Promise<{ appId: string }> }) {
+  const { appId } = use(params)
   return (
     <Suspense
       fallback={
@@ -148,7 +149,7 @@ export default function AppDetailPage({ params }: { params: { appId: string } })
         </div>
       }
     >
-      <AppDetailContent appId={params.appId} />
+      <AppDetailContent appId={appId} />
     </Suspense>
   )
 }
