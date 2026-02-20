@@ -30,7 +30,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             >
               <button
                 type="button"
-                onClick={() => router.push("/")}
+                onClick={() => router.push("/dashboard")}
                 className="flex items-center"
               >
                 <IconTerminal2 className="!size-6 mr-2" />
