@@ -215,14 +215,15 @@ export function AppSettings({ app: initialApp }: AppSettingsProps) {
           <pre className="p-4 rounded-lg bg-zinc-950 border border-zinc-800 text-xs font-mono text-zinc-300 overflow-x-auto leading-relaxed whitespace-pre">
 {`from sentry_logger import init
 
-init(
-    api_key="${app.api_key}",
-    dsn="${(process.env.NEXT_PUBLIC_BACKEND_URL ?? "https://api.sentrylabs.live").replace(/\/$/, "")}",
-)`}
+# Option A — zero config (CLI already saved credentials)
+init()
+
+# Option B — explicit key
+init(api_key="${app.api_key}")`}
           </pre>
           <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
             <CopyButton
-              text={`from sentry_logger import init\n\ninit(\n    api_key="${app.api_key}",\n    dsn="${(process.env.NEXT_PUBLIC_BACKEND_URL ?? "https://api.sentrylabs.live").replace(/\/$/, "")}",\n)`}
+              text={`from sentry_logger import init\n\ninit(api_key="${app.api_key}")`}
               label="Copy"
             />
           </div>
