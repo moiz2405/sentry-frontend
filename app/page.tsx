@@ -1,8 +1,7 @@
 "use client"
 
 import { signIn, useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import Link from "next/link"
 import {
   IconBolt,
   IconChartBar,
@@ -12,6 +11,7 @@ import {
   IconCode,
   IconArrowRight,
   IconBrandGithub,
+  IconLayoutDashboard,
 } from "@tabler/icons-react"
 
 const FEATURES = [
@@ -61,22 +61,7 @@ const STEPS = [
 
 export default function LandingPage() {
   const { data: session, status } = useSession()
-  const router = useRouter()
-
-  // Redirect already-authenticated users straight to the dashboard
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.replace("/dashboard")
-    }
-  }, [status, router])
-
-  if (status === "loading" || status === "authenticated") {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-zinc-950">
-        <div className="w-6 h-6 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
-      </div>
-    )
-  }
+  const isLoggedIn = status === "authenticated"
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
@@ -88,14 +73,24 @@ export default function LandingPage() {
             <IconTerminal2 className="size-6 text-blue-400" />
             <span className="text-xl font-extrabold tracking-tight">Sentry</span>
           </div>
-          <button
-            type="button"
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-500 transition-colors"
-          >
-            Sign in with Google
-            <IconArrowRight className="size-4" />
-          </button>
+          {isLoggedIn ? (
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-500 transition-colors"
+            >
+              <IconLayoutDashboard className="size-4" />
+              Go to Dashboard
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-500 transition-colors"
+            >
+              Sign in with Google
+              <IconArrowRight className="size-4" />
+            </button>
+          )}
         </div>
       </header>
 
@@ -124,14 +119,24 @@ export default function LandingPage() {
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button
-              type="button"
-              onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-              className="flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-3.5 text-base font-bold text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/25"
-            >
-              Get started free
-              <IconArrowRight className="size-5" />
-            </button>
+            {isLoggedIn ? (
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-3.5 text-base font-bold text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/25"
+              >
+                <IconLayoutDashboard className="size-5" />
+                Go to Dashboard
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+                className="flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-3.5 text-base font-bold text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/25"
+              >
+                Get started free
+                <IconArrowRight className="size-5" />
+              </button>
+            )}
             <a
               href="https://github.com"
               target="_blank"
@@ -249,14 +254,24 @@ export default function LandingPage() {
           <p className="text-zinc-400 mb-10 text-lg">
             Sign in with your Google account and add your first app in under a minute.
           </p>
-          <button
-            type="button"
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-            className="inline-flex items-center gap-3 rounded-xl bg-blue-600 px-10 py-4 text-lg font-bold text-white hover:bg-blue-500 transition-colors shadow-xl shadow-blue-600/25"
-          >
-            Get started — it&apos;s free
-            <IconArrowRight className="size-5" />
-          </button>
+          {isLoggedIn ? (
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-3 rounded-xl bg-blue-600 px-10 py-4 text-lg font-bold text-white hover:bg-blue-500 transition-colors shadow-xl shadow-blue-600/25"
+            >
+              <IconLayoutDashboard className="size-5" />
+              Go to Dashboard
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+              className="inline-flex items-center gap-3 rounded-xl bg-blue-600 px-10 py-4 text-lg font-bold text-white hover:bg-blue-500 transition-colors shadow-xl shadow-blue-600/25"
+            >
+              Get started — it&apos;s free
+              <IconArrowRight className="size-5" />
+            </button>
+          )}
         </div>
       </section>
 
