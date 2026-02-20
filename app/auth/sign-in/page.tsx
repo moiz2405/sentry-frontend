@@ -6,7 +6,7 @@ import { LoginForm } from "@/components/auth/login-form";
 
 function SignInContent() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 text-zinc-100">
