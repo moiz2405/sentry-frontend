@@ -23,10 +23,12 @@ import {
   ItemTitle,
 } from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
-import { IconCopy } from "@tabler/icons-react"
+import { IconCopy, IconArrowRight } from "@tabler/icons-react"
+import { useRouter } from "next/navigation"
 
 export function AddAppContent() {
   const { data: session } = useSession()
+  const router = useRouter()
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [loading, setLoading] = useState(false)
@@ -132,14 +134,24 @@ init(api_key="${createdApp.api_key}", dsn="${ingestBase}")
 `}
               </pre>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCreatedApp(null)}
-              className="w-full"
-            >
-              Add another app
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreatedApp(null)}
+                className="flex-1"
+              >
+                Add another app
+              </Button>
+              <Button
+                type="button"
+                onClick={() => router.push(`/my-app/${createdApp.id}`)}
+                className="flex-1 gap-2"
+              >
+                View Dashboard
+                <IconArrowRight className="size-4" />
+              </Button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-8">
