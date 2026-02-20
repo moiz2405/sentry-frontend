@@ -75,7 +75,7 @@ export function AddAppContent() {
     }
   }
 
-  const ingestBase = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8001").replace(/\/$/, "")
+  const ingestBase = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:9000").replace(/\/$/, "")
 
   return (
     <div className="flex flex-col items-center justify-center flex-1 px-6 py-10 bg-gradient-to-b from-black via-zinc-950 to-black">
