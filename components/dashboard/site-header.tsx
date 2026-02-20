@@ -9,22 +9,24 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import React, { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { backendAPI } from "@/lib/api/backend-api"
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const segments = pathname.split("/").filter(Boolean);
   const [appName, setAppName] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    // If route is /my-app/[appId], fetch app data
-    if (segments[0] === "my-app" && segments[1]) {
+    // If route is /my-app/[appId], fetch app name for breadcrumb
+    if (segments[0] === "my-app" && segments[1] && session?.user?.id) {
       backendAPI
-        .getApp(segments[1])
-        .then((data: any) => setAppName(data?.name))
+        .getApp(segments[1], session.user.id)
+        .then((data) => setAppName(data?.name))
         .catch(() => setAppName(undefined));
     }
-  }, [pathname, segments]);
+  }, [pathname, segments, session?.user?.id]);
 
   const crumbs = [
     { name: "Home", href: "/" },
