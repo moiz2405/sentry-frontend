@@ -1,15 +1,18 @@
 import { auth } from "./auth";
 
 export default auth((req) => {
-  const publicRoutes = ["/", "/auth/sign-in"];
-  if (
-    !req.auth &&
-    !publicRoutes.includes(req.nextUrl.pathname) &&
-    !req.nextUrl.pathname.startsWith("/api/auth")
-  ) {
-    const newUrl = new URL("/auth/sign-in", req.nextUrl.origin);
-    newUrl.searchParams.set("callbackUrl", req.nextUrl.href);
-    return Response.redirect(newUrl);
+  const { pathname } = req.nextUrl;
+
+  // Routes that are always public — no auth check needed
+  const publicPrefixes = ["/", "/auth", "/api/auth"];
+  const isPublic =
+    pathname === "/" ||
+    publicPrefixes.some((p) => p !== "/" && pathname.startsWith(p));
+
+  if (!req.auth && !isPublic) {
+    // Send unauthenticated visitors to the landing page.
+    // The landing page shows the "Sign in with Google" CTA.
+    return Response.redirect(new URL("/", req.nextUrl.origin));
   }
 });
 
