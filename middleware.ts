@@ -1,7 +1,7 @@
 import { auth } from "./auth";
 
 export default auth((req) => {
-  const publicRoutes = ["/auth/sign-in"];
+  const publicRoutes = ["/", "/auth/sign-in"];
   if (
     !req.auth &&
     !publicRoutes.includes(req.nextUrl.pathname) &&
