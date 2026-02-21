@@ -211,21 +211,48 @@ export function AppSettings({ app: initialApp }: AppSettingsProps) {
           title="SDK Setup"
           description="Add this to your Python app to start sending logs."
         />
-        <div className="relative group">
-          <pre className="p-4 rounded-lg bg-zinc-950 border border-zinc-800 text-xs font-mono text-zinc-300 overflow-x-auto leading-relaxed whitespace-pre">
-{`from sentry_logger import init
-
-# Option A — zero config (CLI already saved credentials)
-init()
-
-# Option B — explicit key
-init(api_key="${app.api_key}")`}
-          </pre>
-          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-            <CopyButton
-              text={`from sentry_logger import init\n\ninit(api_key="${app.api_key}")`}
-              label="Copy"
-            />
+        <div className="space-y-3">
+          {/* Install */}
+          <div>
+            <p className="text-xs text-zinc-500 mb-1.5 font-medium uppercase tracking-wider">Install</p>
+            <div className="relative group">
+              <pre className="rounded-lg bg-zinc-950 border border-zinc-800 px-4 py-3 text-xs font-mono text-zinc-300 overflow-x-auto">
+{`pip install sentry-logger`}
+              </pre>
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <CopyButton text="pip install sentry-logger" label="Copy" />
+              </div>
+            </div>
+          </div>
+          {/* Direct API key */}
+          <div>
+            <p className="text-xs text-zinc-500 mb-1.5 font-medium uppercase tracking-wider">Explicit key</p>
+            <div className="relative group">
+              <pre className="rounded-lg bg-zinc-950 border border-zinc-800 px-4 py-3 text-xs font-mono text-zinc-300 overflow-x-auto leading-relaxed whitespace-pre">
+{`from sentry_logger import init\ninit(api_key="${app.api_key}")`}
+              </pre>
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <CopyButton
+                  text={`from sentry_logger import init\ninit(api_key="${app.api_key}")`}
+                  label="Copy"
+                />
+              </div>
+            </div>
+          </div>
+          {/* Environment variable */}
+          <div>
+            <p className="text-xs text-zinc-500 mb-1.5 font-medium uppercase tracking-wider">Via env variable (.env / Docker)</p>
+            <div className="relative group">
+              <pre className="rounded-lg bg-zinc-950 border border-zinc-800 px-4 py-3 text-xs font-mono text-zinc-300 overflow-x-auto leading-relaxed whitespace-pre">
+{`SENTRY_API_KEY=${app.api_key}`}
+              </pre>
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <CopyButton text={`SENTRY_API_KEY=${app.api_key}`} label="Copy" />
+              </div>
+            </div>
+            <p className="mt-1.5 text-xs text-zinc-500">
+              Set this env var, then call <code className="font-mono">init()</code> with no arguments — it reads it automatically.
+            </p>
           </div>
         </div>
       </section>
