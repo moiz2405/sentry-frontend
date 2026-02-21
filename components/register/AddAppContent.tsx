@@ -54,7 +54,8 @@ export function AddAppContent() {
     try {
       const data = await backendAPI.createApp(
         { name: name.trim(), description: description.trim() || undefined },
-        session.user.id
+        session.user.id,
+        { email: session.user.email, name: session.user.name, image: session.user.image }
       )
       setSuccess(true)
       setCreatedApp({ id: data.id, name: data.name, api_key: data.api_key })
