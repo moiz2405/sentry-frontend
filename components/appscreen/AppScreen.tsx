@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/empty";
 import { IconFolderCode } from "@tabler/icons-react";
 import { backendAPI, type DashboardSummary } from "@/lib/api/backend-api";
+import { TerminalLog } from "@/components/appscreen/TerminalLog";
 
 interface AppScreenProps {
   appId: string;
@@ -118,14 +119,24 @@ export function AppScreen({ appId }: AppScreenProps) {
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={55} minSize={20}>
-          <div className="flex items-stretch justify-center flex-1 w-full h-full p-6">
-            <ResponsiveChartWrapper>
-              <ChartAreaInteractive
-                errorRates={summary?.errors_per_10_logs ?? []}
-                avgErrorRate={summary?.avg_errors_per_10_logs ?? 0}
-              />
-            </ResponsiveChartWrapper>
-          </div>
+          <ResizablePanelGroup direction="vertical" className="h-full">
+            <ResizablePanel defaultSize={40} minSize={15}>
+              {session?.user?.id && (
+                <TerminalLog appId={appId} userId={session.user.id} />
+              )}
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={60} minSize={20}>
+              <div className="flex items-stretch justify-center flex-1 w-full h-full p-6">
+                <ResponsiveChartWrapper>
+                  <ChartAreaInteractive
+                    errorRates={summary?.errors_per_10_logs ?? []}
+                    avgErrorRate={summary?.avg_errors_per_10_logs ?? 0}
+                  />
+                </ResponsiveChartWrapper>
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
