@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeftIcon } from "lucide-react";
 import type { DashboardSummary } from "@/lib/api/backend-api";
@@ -34,21 +34,15 @@ export function ServiceDetailsPanel({
   summary,
   onBack,
 }: ServiceDetailsPanelProps) {
-  const [storedSummary, setStoredSummary] = useState<any>(null);
-
-  useEffect(() => {
-    setStoredSummary(summary);
-  }, [service, summary]);
-
-  const health = storedSummary?.service_health?.[service] || "unknown";
-  const riskScore = storedSummary?.service_risk_scores?.[service] ?? 0;
-  const riskLevel = storedSummary?.service_risk_levels?.[service] || "low";
-  const confidence = storedSummary?.service_risk_confidence?.[service] ?? 0;
-  const trend = storedSummary?.service_risk_trend?.[service] || "insufficient_data";
-  const etaMinutes = storedSummary?.service_failure_eta_minutes?.[service];
-  const likelyToFail = Boolean(storedSummary?.service_failure_prediction?.[service]);
-  const reasons: string[] = storedSummary?.service_risk_reasons?.[service] || [];
-  const recommendations: string[] = storedSummary?.service_recommendations?.[service] || [];
+  const health = summary?.service_health?.[service] || "unknown";
+  const riskScore = summary?.service_risk_scores?.[service] ?? 0;
+  const riskLevel = summary?.service_risk_levels?.[service] || "low";
+  const confidence = summary?.service_risk_confidence?.[service] ?? 0;
+  const trend = summary?.service_risk_trend?.[service] || "insufficient_data";
+  const etaMinutes = summary?.service_failure_eta_minutes?.[service];
+  const likelyToFail = Boolean(summary?.service_failure_prediction?.[service]);
+  const reasons: string[] = summary?.service_risk_reasons?.[service] || [];
+  const recommendations: string[] = summary?.service_recommendations?.[service] || [];
 
   return (
     <div className="w-full h-[80vh] flex flex-col p-4 shadow-lg rounded-2xl bg-[oklch(0.205_0_0)] overflow-hidden">
@@ -75,10 +69,10 @@ export function ServiceDetailsPanel({
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-lg font-semibold">Severity:</span>
-                {storedSummary?.severity_distribution?.[service] ? (
+                {summary?.severity_distribution?.[service] ? (
                   <table className="ml-2 text-sm border-separate border-spacing-x-2">
                     <tbody>
-                      {Object.entries(storedSummary.severity_distribution[service]).map(([level, count]) => (
+                      {Object.entries(summary.severity_distribution[service]).map(([level, count]) => (
                         <tr key={level}>
                           <td className="font-mono text-zinc-300">{level}</td>
                           <td className="font-bold text-zinc-100">{String(count)}</td>
@@ -123,7 +117,7 @@ export function ServiceDetailsPanel({
             <div className="p-4 rounded-lg bg-zinc-800/70">
               <span className="text-lg font-semibold">Most Common Error:</span>
               <div className="mt-1 font-mono text-base text-red-300">
-                {storedSummary?.most_common_errors?.[service] || "None"}
+                {summary?.most_common_errors?.[service] || "None"}
               </div>
             </div>
 
@@ -157,13 +151,13 @@ export function ServiceDetailsPanel({
               <div>
                 <span className="font-semibold">First Error:</span>{" "}
                 <span className="font-mono text-zinc-300">
-                  {storedSummary?.first_error_timestamp?.[service] || "N/A"}
+                  {summary?.first_error_timestamp?.[service] || "N/A"}
                 </span>
               </div>
               <div>
                 <span className="font-semibold">Last Error:</span>{" "}
                 <span className="font-mono text-zinc-300">
-                  {storedSummary?.latest_error_timestamp?.[service] || "N/A"}
+                  {summary?.latest_error_timestamp?.[service] || "N/A"}
                 </span>
               </div>
             </div>
@@ -171,8 +165,8 @@ export function ServiceDetailsPanel({
             <div>
               <span className="text-lg font-semibold">Recent Errors:</span>
               <ul className="mt-3 space-y-3">
-                {storedSummary?.recent_errors?.[service]?.length > 0 ? (
-                  storedSummary.recent_errors[service].map((err: any, idx: number) => (
+                {(summary?.recent_errors?.[service]?.length ?? 0) > 0 ? (
+                  summary!.recent_errors[service].map((err: any, idx: number) => (
                     <li
                       key={idx}
                       className="p-3 border rounded-lg bg-zinc-900/80 border-zinc-800"
