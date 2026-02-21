@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/resizable";
 import { ServiceHealthCards } from "@/components/appscreen/ServiceHealthCards";
 import { LogTimelineChart } from "@/components/appscreen/LogTimelineChart";
+import { ChartAreaInteractive } from "@/components/dashboard/chart-area-interactive";
 import { ServiceDetailsPanel } from "@/components/appscreen/ServiceDetailsPanel";
 import {
   Empty,
@@ -16,7 +17,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { IconFolderCode } from "@tabler/icons-react";
+import { IconFolderCode, IconActivity, IconChartBar } from "@tabler/icons-react";
 import { backendAPI, type DashboardSummary } from "@/lib/api/backend-api";
 import { TerminalLog } from "@/components/appscreen/TerminalLog";
 
@@ -26,11 +27,14 @@ interface AppScreenProps {
 
 const POLL_INTERVAL_MS = 5000;
 
+type ChartMode = "live" | "history";
+
 export function AppScreen({ appId }: AppScreenProps) {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [chartMode, setChartMode] = useState<ChartMode>("live");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -126,8 +130,48 @@ export function AppScreen({ appId }: AppScreenProps) {
             </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel defaultSize={60} minSize={20}>
-              <div className="flex items-stretch flex-1 w-full h-full p-4">
-                <LogTimelineChart appId={appId} />
+              <div className="flex flex-col w-full h-full p-4 gap-2">
+                {/* Mode toggle */}
+                <div className="flex items-center gap-1 self-end shrink-0">
+                  <div className="flex items-center rounded-lg border border-zinc-700 bg-zinc-800/60 overflow-hidden text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setChartMode("live")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${
+                        chartMode === "live"
+                          ? "bg-zinc-700 text-zinc-100 font-medium"
+                          : "text-zinc-500 hover:text-zinc-300"
+                      }`}
+                    >
+                      <IconActivity className="size-3" />
+                      Live
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChartMode("history")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${
+                        chartMode === "history"
+                          ? "bg-zinc-700 text-zinc-100 font-medium"
+                          : "text-zinc-500 hover:text-zinc-300"
+                      }`}
+                    >
+                      <IconChartBar className="size-3" />
+                      History
+                    </button>
+                  </div>
+                </div>
+
+                {/* Chart */}
+                <div className="flex-1 min-h-0">
+                  {chartMode === "live" ? (
+                    <ChartAreaInteractive
+                      errorRates={summary?.errors_per_10_logs ?? []}
+                      avgErrorRate={summary?.avg_errors_per_10_logs ?? 0}
+                    />
+                  ) : (
+                    <LogTimelineChart appId={appId} />
+                  )}
+                </div>
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
