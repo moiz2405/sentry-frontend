@@ -403,7 +403,7 @@ export default function LandingPage() {
             <IconTerminal2 className="size-4 text-blue-400" />
             <span className="text-sm font-bold text-zinc-300">Sentry</span>
             <span className="text-zinc-700 mx-2">·</span>
-            <span className="text-xs text-zinc-600">Built for developers</span>
+            <span className="text-xs text-zinc-600">Built for developers By Developer (Almoiz Khan)</span>
           </div>
           <div className="flex items-center gap-6 text-xs text-zinc-600">
             <a href="#features" className="hover:text-zinc-400 transition-colors">Features</a>
