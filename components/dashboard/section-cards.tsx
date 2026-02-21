@@ -7,8 +7,10 @@ import { useRouter } from "next/navigation"
 import {
   IconSettings,
   IconTrash,
-  IconLayoutDashboard,
   IconFolderCode,
+  IconLoader2,
+  IconPlus,
+  IconExternalLink,
 } from "@tabler/icons-react"
 import { backendAPI, type App } from "@/lib/api/backend-api"
 import { Button } from "@/components/ui/button"
@@ -31,27 +33,42 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const days = Math.floor(diff / 86_400_000)
-  if (days === 0) return "today"
-  if (days === 1) return "yesterday"
-  if (days < 30) return `${days}d ago`
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months}mo ago`
-  return `${Math.floor(months / 12)}y ago`
+// ── Palette ───────────────────────────────────────────────────────────────────
+
+const PALETTE = [
+  { hex: "#3b82f6", tw: "from-blue-500/20 to-blue-500/5",    text: "text-blue-300",    ring: "ring-blue-500/30"    },
+  { hex: "#8b5cf6", tw: "from-violet-500/20 to-violet-500/5", text: "text-violet-300",  ring: "ring-violet-500/30"  },
+  { hex: "#10b981", tw: "from-emerald-500/20 to-emerald-500/5",text: "text-emerald-300", ring: "ring-emerald-500/30" },
+  { hex: "#f97316", tw: "from-orange-500/20 to-orange-500/5", text: "text-orange-300",  ring: "ring-orange-500/30"  },
+  { hex: "#f43f5e", tw: "from-rose-500/20 to-rose-500/5",     text: "text-rose-300",    ring: "ring-rose-500/30"    },
+  { hex: "#06b6d4", tw: "from-cyan-500/20 to-cyan-500/5",     text: "text-cyan-300",    ring: "ring-cyan-500/30"    },
+  { hex: "#f59e0b", tw: "from-amber-500/20 to-amber-500/5",   text: "text-amber-300",   ring: "ring-amber-500/30"   },
+  { hex: "#ec4899", tw: "from-pink-500/20 to-pink-500/5",     text: "text-pink-300",    ring: "ring-pink-500/30"    },
+]
+
+function paletteFor(name: string) {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h)
+  return PALETTE[Math.abs(h) % PALETTE.length]
 }
 
-function AppCard({
-  app,
-  onDeleted,
-}: {
-  app: App
-  onDeleted: (id: string) => void
-}) {
+function timeAgo(dateStr: string) {
+  const d = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000)
+  if (d === 0) return "today"
+  if (d === 1) return "yesterday"
+  if (d < 30)  return `${d}d ago`
+  const m = Math.floor(d / 30)
+  return m < 12 ? `${m}mo ago` : `${Math.floor(m / 12)}y ago`
+}
+
+// ── AppCard ───────────────────────────────────────────────────────────────────
+
+function AppCard({ app, onDeleted }: { app: App; onDeleted: (id: string) => void }) {
   const { data: session } = useSession()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const p = paletteFor(app.name)
+  const initials = app.name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "AP"
 
   async function handleDelete() {
     const userId = session?.user?.id
@@ -60,68 +77,71 @@ function AppCard({
     try {
       await backendAPI.deleteApp(app.id, userId)
       onDeleted(app.id)
-    } catch {
-      // silently ignore — toast handled elsewhere
-    } finally {
-      setDeleting(false)
-      setDeleteOpen(false)
-    }
+    } catch { /* ignore */ }
+    finally { setDeleting(false); setDeleteOpen(false) }
   }
 
   return (
-    <div className="group relative flex flex-col rounded-xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900 transition-all duration-150 overflow-hidden">
-      {/* Main clickable area → Dashboard */}
-      <Link
-        href={`/my-app/${app.id}`}
-        className="flex flex-col gap-2 p-5 flex-1 focus:outline-none"
-      >
-        {/* App name */}
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-base font-semibold text-zinc-100 leading-tight truncate">
+    <div className="group relative flex flex-col rounded-2xl bg-zinc-900 border border-zinc-800/80 hover:border-zinc-700 transition-all duration-200 hover:shadow-xl hover:shadow-black/30 overflow-hidden">
+
+      {/* Clickable body */}
+      <Link href={`/my-app/${app.id}`} className="flex flex-col p-5 gap-4 flex-1 focus-visible:outline-none">
+
+        {/* Avatar */}
+        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${p.tw} ring-1 ${p.ring} flex items-center justify-center shrink-0`}>
+          <span className={`text-sm font-bold ${p.text}`}>{initials}</span>
+        </div>
+
+        {/* Name + meta */}
+        <div className="min-w-0">
+          <h3 className="font-semibold text-zinc-100 text-base leading-snug truncate">
             {app.name}
           </h3>
+          {app.description ? (
+            <p className="text-xs text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
+              {app.description}
+            </p>
+          ) : app.url ? (
+            <p className="text-xs text-zinc-600 mt-1 truncate">{app.url}</p>
+          ) : null}
         </div>
 
-        {/* Description */}
-        {app.description ? (
-          <p className="text-sm text-zinc-400 line-clamp-2 leading-snug">
-            {app.description}
-          </p>
-        ) : (
-          <p className="text-sm text-zinc-600 italic">No description</p>
-        )}
-
-        {/* Meta row */}
-        <div className="mt-auto pt-3 flex items-center gap-3 text-xs text-zinc-500 border-t border-zinc-800">
-          <span>Created {timeAgo(app.created_at)}</span>
-          <span className="ml-auto flex items-center gap-1 text-zinc-600">
-            <IconLayoutDashboard className="size-3.5" />
-            Dashboard
-          </span>
-        </div>
       </Link>
 
-      {/* Action strip — visible on hover */}
-      <div className="flex items-center gap-1 px-3 py-2 border-t border-zinc-800 bg-zinc-950/40 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Link
-          href={`/my-app/${app.id}?tab=settings`}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <IconSettings className="size-3.5" />
-          Settings
-        </Link>
+      {/* Footer — always visible */}
+      <div className="flex items-center justify-between px-5 py-3 border-t border-zinc-800/60">
+        <span className="text-xs text-zinc-600">{timeAgo(app.created_at)}</span>
 
-        <div className="ml-auto">
+        <div className="flex items-center gap-0.5">
+          {app.url && (
+            <a
+              href={app.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open URL"
+              onClick={(e) => e.stopPropagation()}
+              className="p-1.5 rounded-md text-zinc-700 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
+            >
+              <IconExternalLink className="size-3.5" />
+            </a>
+          )}
+          <Link
+            href={`/my-app/${app.id}?tab=settings`}
+            title="Settings"
+            onClick={(e) => e.stopPropagation()}
+            className="p-1.5 rounded-md text-zinc-700 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
+          >
+            <IconSettings className="size-3.5" />
+          </Link>
           <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
             <DialogTrigger asChild>
               <button
                 type="button"
+                title="Delete"
                 onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-950/40 transition-colors"
+                className="p-1.5 rounded-md text-zinc-700 hover:text-red-400 hover:bg-red-950/40 transition-colors"
               >
                 <IconTrash className="size-3.5" />
-                Delete
               </button>
             </DialogTrigger>
             <DialogContent>
@@ -132,15 +152,9 @@ function AppCard({
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">Cancel</Button>
-                </DialogClose>
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={deleting}
-                >
-                  {deleting ? "Deleting…" : "Delete permanently"}
+                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+                  {deleting ? <><IconLoader2 className="size-3.5 animate-spin mr-1.5" />Deleting…</> : "Delete permanently"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -150,6 +164,27 @@ function AppCard({
     </div>
   )
 }
+
+// ── Add card ──────────────────────────────────────────────────────────────────
+
+function AddAppCard({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-zinc-800 hover:border-zinc-600 bg-transparent hover:bg-zinc-900/40 transition-all duration-200 min-h-[148px] cursor-pointer"
+    >
+      <div className="w-10 h-10 rounded-xl bg-zinc-800/60 group-hover:bg-zinc-700/60 flex items-center justify-center transition-colors">
+        <IconPlus className="size-4 text-zinc-600 group-hover:text-zinc-300 transition-colors" />
+      </div>
+      <span className="text-xs font-medium text-zinc-700 group-hover:text-zinc-400 transition-colors">
+        New app
+      </span>
+    </button>
+  )
+}
+
+// ── SectionCards ──────────────────────────────────────────────────────────────
 
 export function SectionCards() {
   const router = useRouter()
@@ -162,25 +197,18 @@ export function SectionCards() {
       setLoading(true)
       backendAPI
         .getApps(session.user.id)
-        .then((apps) => {
-          setApps(apps)
-        })
-        .catch((err) => console.error("Failed to load apps:", err))
+        .then(setApps)
+        .catch(console.error)
         .finally(() => setLoading(false))
     }
   }, [session?.user?.id])
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-4 px-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 lg:px-6">
-        {Array(3)
-          .fill(null)
-          .map((_, i) => (
-            <div
-              key={i}
-              className="h-40 rounded-xl border border-zinc-800 bg-zinc-900/40 animate-pulse"
-            />
-          ))}
+      <div className="grid grid-cols-1 gap-3 px-4 sm:grid-cols-2 lg:grid-cols-3 lg:px-6">
+        {Array(3).fill(null).map((_, i) => (
+          <div key={i} className="h-[148px] rounded-2xl border border-zinc-800/60 bg-zinc-900/30 animate-pulse" />
+        ))}
       </div>
     )
   }
@@ -190,13 +218,9 @@ export function SectionCards() {
       <div className="flex items-center justify-center py-16 px-4">
         <Empty>
           <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <IconFolderCode />
-            </EmptyMedia>
+            <EmptyMedia variant="icon"><IconFolderCode /></EmptyMedia>
             <EmptyTitle>No apps yet</EmptyTitle>
-            <EmptyDescription>
-              Register your first app to get an API key and start receiving logs.
-            </EmptyDescription>
+            <EmptyDescription>Register your first app to get an API key and start receiving logs.</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button onClick={() => router.push("/register")}>Add your first app</Button>
@@ -207,14 +231,11 @@ export function SectionCards() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 px-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 lg:px-6">
+    <div className="grid grid-cols-1 gap-3 px-4 sm:grid-cols-2 lg:grid-cols-3 lg:px-6">
       {apps.map((app) => (
-        <AppCard
-          key={app.id}
-          app={app}
-          onDeleted={(id) => setApps((prev) => prev.filter((a) => a.id !== id))}
-        />
+        <AppCard key={app.id} app={app} onDeleted={(id) => setApps((p) => p.filter((a) => a.id !== id))} />
       ))}
+      <AddAppCard onClick={() => router.push("/register")} />
     </div>
   )
 }
