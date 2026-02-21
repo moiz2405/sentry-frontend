@@ -202,20 +202,19 @@ export function LogChatPanel({ appId }: LogChatPanelProps) {
       // Flush any remaining bytes
       accumulated += decoder.decode();
 
-      // Commit the finished message and clear the streaming buffer
+      // Commit the finished message — MarkdownMessage renders it properly
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: accumulated, ts: new Date().toISOString() },
       ]);
-      setStreamingContent("");
     } catch (err: unknown) {
       const detail = err instanceof Error ? err.message : "Chat failed";
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: `⚠️ ${detail}`, ts: new Date().toISOString() },
       ]);
-      setStreamingContent("");
     } finally {
+      setStreamingContent("");
       setLoading(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
@@ -241,7 +240,7 @@ export function LogChatPanel({ appId }: LogChatPanelProps) {
   const isEmpty = messages.length === 0;
 
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-220px)] min-h-[500px]">
+    <div className="flex flex-col h-[calc(100vh-220px)]">
       {/* ── Header ────────────────────────────────────── */}
       {!isEmpty && (
         <div className="flex items-center justify-between px-1 pb-2 border-b border-zinc-800">
@@ -259,7 +258,7 @@ export function LogChatPanel({ appId }: LogChatPanelProps) {
       )}
 
       {/* ── Messages ──────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto py-4 space-y-4 scrollbar-thin scrollbar-thumb-zinc-700">
+      <div className="flex-1 overflow-y-auto py-4 space-y-4 min-h-0 scrollbar-thin scrollbar-thumb-zinc-700">
         {loadingHistory ? (
           <div className="flex items-center justify-center h-full">
             <IconLoader2 className="size-5 text-zinc-600 animate-spin" />
@@ -320,7 +319,11 @@ export function LogChatPanel({ appId }: LogChatPanelProps) {
                 </div>
                 <div className="max-w-[82%] bg-zinc-800/80 border border-zinc-700 rounded-2xl rounded-bl-sm px-4 py-3">
                   {streamingContent ? (
-                    <MarkdownMessage content={streamingContent} />
+                    // Plain text during streaming — partial markdown would render wrong
+                    <span className="text-sm text-zinc-200 whitespace-pre-wrap leading-relaxed">
+                      {streamingContent}
+                      <span className="inline-block w-0.5 h-[1em] ml-0.5 bg-blue-400 align-middle animate-pulse" />
+                    </span>
                   ) : (
                     <div className="flex gap-1 items-center h-4">
                       <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce [animation-delay:0ms]" />
