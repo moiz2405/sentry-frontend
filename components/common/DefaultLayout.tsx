@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import { AppSidebar } from "@/components/dashboard/app-sidebar"
 import { SiteHeader } from "@/components/dashboard/site-header"
 import {
@@ -20,6 +20,11 @@ export default function DefaultLayout({ children }: { children?: React.ReactNode
   // patch the JWT via update() so subsequent API calls use the correct id.
   useEffect(() => {
     const u = session?.user
+    // If we have a session but no user id the JWT is corrupt/stale — force re-auth
+    if (session && !u?.id) {
+      signOut({ callbackUrl: "/" })
+      return
+    }
     if (u?.id && u?.email) {
       backendAPI.syncUser({
         id: u.id,
