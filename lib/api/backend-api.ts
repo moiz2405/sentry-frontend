@@ -158,11 +158,19 @@ class BackendAPI {
   /** Create a new app and receive its API key. */
   async createApp(
     data: { name: string; description?: string },
-    userId: string
+    userId: string,
+    user?: { email?: string | null; name?: string | null; image?: string | null }
   ): Promise<App> {
     return this.request<App>("/apps", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        // Pass user fields so the backend can auto-upsert the user row
+        // if the server-side auth callback was ever skipped.
+        user_email: user?.email ?? null,
+        user_name: user?.name ?? null,
+        user_image: user?.image ?? null,
+      }),
       userId,
     })
   }
