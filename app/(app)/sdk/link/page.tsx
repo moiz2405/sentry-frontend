@@ -50,6 +50,10 @@ function SdkLinkContent() {
       return;
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7940/ingest/928a8000-7476-4004-9922-25c3c815b409',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8df084'},body:JSON.stringify({sessionId:'8df084',location:'sdk/link/page.tsx:useEffect',message:'about to call complete',data:{userId,email:session?.user?.email,deviceCode},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+
     setDone(true);
     fetch(`${backendBase}/sdk/device/complete`, {
       method: "POST",
@@ -58,6 +62,10 @@ function SdkLinkContent() {
         device_code: deviceCode,
         user_id: userId,
         app_name: appName || undefined,
+        // Include profile so backend can resolve canonical id via upsert_user
+        user_email: session?.user?.email ?? undefined,
+        user_name: session?.user?.name ?? undefined,
+        user_image: session?.user?.image ?? undefined,
       }),
     })
       .then(async (res) => {
