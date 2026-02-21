@@ -1,201 +1,253 @@
 import React from "react";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeftIcon } from "lucide-react";
+import {
+  IconArrowLeft,
+  IconShieldCheck,
+  IconAlertTriangle,
+  IconAlertCircle,
+  IconTrendingUp,
+  IconTrendingDown,
+  IconMinus,
+  IconClock,
+  IconBug,
+  IconBulb,
+  IconActivityHeartbeat,
+} from "@tabler/icons-react";
 import type { DashboardSummary } from "@/lib/api/backend-api";
 
-interface ServiceDetailsPanelProps {
+interface Props {
   service: string;
   summary: DashboardSummary | null;
   onBack: () => void;
 }
 
-const healthColor: Record<string, string> = {
-  healthy: "text-green-400 font-bold",
-  warning: "text-yellow-400 font-bold",
-  unhealthy: "text-red-400 font-bold",
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const HEALTH_CFG: Record<string, { label: string; text: string; bg: string; border: string; icon: React.ElementType }> = {
+  healthy:   { label: "Healthy",   text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", icon: IconShieldCheck   },
+  warning:   { label: "Warning",   text: "text-yellow-400",  bg: "bg-yellow-500/10",  border: "border-yellow-500/20",  icon: IconAlertCircle   },
+  unhealthy: { label: "Unhealthy", text: "text-red-400",     bg: "bg-red-500/10",     border: "border-red-500/20",     icon: IconAlertTriangle },
+};
+const HEALTH_FALLBACK = { label: "Unknown", text: "text-zinc-500", bg: "bg-zinc-800/40", border: "border-zinc-700", icon: IconActivityHeartbeat };
+
+const RISK_CFG: Record<string, { label: string; text: string; bar: string }> = {
+  low:      { label: "Low",      text: "text-emerald-400", bar: "bg-emerald-500" },
+  medium:   { label: "Medium",   text: "text-yellow-400",  bar: "bg-yellow-500"  },
+  high:     { label: "High",     text: "text-orange-400",  bar: "bg-orange-500"  },
+  critical: { label: "Critical", text: "text-red-400",     bar: "bg-red-500"     },
 };
 
-const riskColor: Record<string, string> = {
-  low: "text-green-400 font-bold",
-  medium: "text-yellow-300 font-bold",
-  high: "text-orange-300 font-bold",
-  critical: "text-red-400 font-bold",
+const TREND_CFG: Record<string, { label: string; text: string; icon: React.ElementType }> = {
+  increasing:        { label: "Increasing",        text: "text-red-400",     icon: IconTrendingUp   },
+  stable:            { label: "Stable",            text: "text-yellow-400",  icon: IconMinus        },
+  decreasing:        { label: "Decreasing",        text: "text-emerald-400", icon: IconTrendingDown },
+  insufficient_data: { label: "Insufficient data", text: "text-zinc-500",    icon: IconMinus        },
 };
 
-const trendColor: Record<string, string> = {
-  increasing: "text-red-300 font-bold",
-  stable: "text-yellow-300 font-bold",
-  decreasing: "text-green-300 font-bold",
-  insufficient_data: "text-zinc-300 font-bold",
+const SEVERITY_TEXT: Record<string, string> = {
+  INFO: "text-blue-400", DEBUG: "text-zinc-400", WARNING: "text-yellow-400",
+  ERROR: "text-red-400", CRITICAL: "text-red-500",
 };
 
-export function ServiceDetailsPanel({
-  service,
-  summary,
-  onBack,
-}: ServiceDetailsPanelProps) {
-  const health = summary?.service_health?.[service] || "unknown";
-  const riskScore = summary?.service_risk_scores?.[service] ?? 0;
-  const riskLevel = summary?.service_risk_levels?.[service] || "low";
+function fmt(iso: string) {
+  try {
+    return new Date(iso).toLocaleString([], {
+      month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+    });
+  } catch { return iso; }
+}
+
+function StatCard({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3">
+      <p className="text-xs text-zinc-500 mb-1">{label}</p>
+      <div className="text-sm font-semibold">{children}</div>
+    </div>
+  );
+}
+
+function Section({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <Icon className="size-3.5 text-zinc-500 shrink-0" />
+        <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{title}</h4>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export function ServiceDetailsPanel({ service, summary, onBack }: Props) {
+  const health     = summary?.service_health?.[service] ?? "unknown";
+  const riskScore  = summary?.service_risk_scores?.[service] ?? 0;
+  const riskLevel  = summary?.service_risk_levels?.[service] ?? "low";
   const confidence = summary?.service_risk_confidence?.[service] ?? 0;
-  const trend = summary?.service_risk_trend?.[service] || "insufficient_data";
-  const etaMinutes = summary?.service_failure_eta_minutes?.[service];
-  const likelyToFail = Boolean(summary?.service_failure_prediction?.[service]);
-  const reasons: string[] = summary?.service_risk_reasons?.[service] || [];
-  const recommendations: string[] = summary?.service_recommendations?.[service] || [];
+  const trend      = summary?.service_risk_trend?.[service] ?? "insufficient_data";
+  const etaMins    = summary?.service_failure_eta_minutes?.[service];
+  const willFail   = Boolean(summary?.service_failure_prediction?.[service]);
+  const reasons    = summary?.service_risk_reasons?.[service] ?? [];
+  const recs       = summary?.service_recommendations?.[service] ?? [];
+  const recentErrs = summary?.recent_errors?.[service] ?? [];
+  const severDist  = summary?.severity_distribution?.[service];
+  const topError   = summary?.most_common_errors?.[service];
+  const firstErr   = summary?.first_error_timestamp?.[service];
+  const lastErr    = summary?.latest_error_timestamp?.[service];
+
+  const hCfg  = HEALTH_CFG[health]   ?? HEALTH_FALLBACK;
+  const rCfg  = RISK_CFG[riskLevel]  ?? RISK_CFG.low;
+  const tCfg  = TREND_CFG[trend]     ?? TREND_CFG.insufficient_data;
+  const HIcon = hCfg.icon;
+  const TIcon = tCfg.icon;
 
   return (
-    <div className="w-full h-[80vh] flex flex-col p-4 shadow-lg rounded-2xl bg-[oklch(0.205_0_0)] overflow-hidden">
-      <div className="flex items-center justify-start shrink-0">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-2 px-4 py-2 font-semibold transition-colors border shadow rounded-xl bg-[oklch(0.205_0_0)] text-zinc-100 hover:bg-zinc-800/90 border-zinc-800/60 backdrop-blur-md"
-        >
-          <ArrowLeftIcon className="w-5 h-5" />
-          <span>Back</span>
-        </button>
+    <div className="flex flex-col h-full">
+      {/* ── Back button ── */}
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-200 transition-colors mb-4 group w-fit"
+      >
+        <IconArrowLeft className="size-3.5 group-hover:-translate-x-0.5 transition-transform" />
+        All services
+      </button>
+
+      {/* ── Service header ── */}
+      <div className="flex items-center gap-3 mb-5">
+        <div className={`flex-shrink-0 p-2 rounded-lg border ${hCfg.bg} ${hCfg.border}`}>
+          <HIcon className={`size-4 ${hCfg.text}`} />
+        </div>
+        <div>
+          <h3 className="text-base font-bold text-zinc-100 leading-tight">{service}</h3>
+          <span className={`text-xs font-medium ${hCfg.text}`}>{hCfg.label}</span>
+        </div>
       </div>
 
-      <Separator className="my-4 shrink-0" />
+      {/* ── Scrollable body ── */}
+      <div className="flex-1 overflow-y-auto space-y-6 pr-1">
 
-      <div className="flex-1 overflow-hidden">
-        <div className="flex flex-col h-full max-w-2xl mx-2 border shadow-lg rounded-xl bg-[oklch(0.205_0_0)] text-zinc-100 border-zinc-800/60 backdrop-blur-md">
-          <div className="flex-1 px-6 pt-6 pb-16 space-y-8 overflow-y-auto hide-scrollbar">
-            <div className="flex flex-col space-y-2 md:flex-row md:items-center md:space-x-8 md:space-y-0">
-              <div className="flex items-center space-x-2">
-                <span className="text-lg font-semibold">Health:</span>
-                <span className={healthColor[health] || "text-zinc-300 font-bold"}>{health}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-lg font-semibold">Severity:</span>
-                {summary?.severity_distribution?.[service] ? (
-                  <table className="ml-2 text-sm border-separate border-spacing-x-2">
-                    <tbody>
-                      {Object.entries(summary.severity_distribution[service]).map(([level, count]) => (
-                        <tr key={level}>
-                          <td className="font-mono text-zinc-300">{level}</td>
-                          <td className="font-bold text-zinc-100">{String(count)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <span className="ml-2 text-zinc-400">N/A</span>
-                )}
+        {/* Risk metrics grid */}
+        <div className="grid grid-cols-2 gap-2">
+          <StatCard label="Risk level">
+            <span className={rCfg.text}>{rCfg.label}</span>
+          </StatCard>
+          <StatCard label="Risk score">
+            <div className="flex items-center gap-2">
+              <span className="text-zinc-100">{riskScore}</span>
+              <div className="flex-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                <div className={`h-full rounded-full ${rCfg.bar}`} style={{ width: `${Math.min(riskScore, 100)}%` }} />
               </div>
             </div>
-
-            <Separator className="my-2" />
-
-            <div className="p-4 rounded-lg bg-zinc-800/70">
-              <span className="text-lg font-semibold">Failure Risk:</span>
-              <div className="mt-2 text-sm text-zinc-300">
-                <span className="font-semibold">Score:</span> {riskScore}
-              </div>
-              <div className="text-sm">
-                <span className="font-semibold text-zinc-300">Level:</span>{" "}
-                <span className={riskColor[riskLevel] || "text-zinc-200 font-bold"}>{riskLevel}</span>
-              </div>
-              <div className="text-sm text-zinc-300">
-                <span className="font-semibold">Confidence:</span> {Math.round(confidence * 100)}%
-              </div>
-              <div className="text-sm">
-                <span className="font-semibold text-zinc-300">Trend:</span>{" "}
-                <span className={trendColor[trend] || "text-zinc-300 font-bold"}>{trend}</span>
-              </div>
-              <div className="text-sm text-zinc-300">
-                <span className="font-semibold">Prediction:</span>{" "}
-                {likelyToFail ? "Likely to fail soon" : "No imminent failure signal"}
-              </div>
-              <div className="text-sm text-zinc-300">
-                <span className="font-semibold">Estimated failure window:</span>{" "}
-                {etaMinutes ? `~${etaMinutes} minutes` : "Not predicted"}
-              </div>
-            </div>
-
-            <div className="p-4 rounded-lg bg-zinc-800/70">
-              <span className="text-lg font-semibold">Most Common Error:</span>
-              <div className="mt-1 font-mono text-base text-red-300">
-                {summary?.most_common_errors?.[service] || "None"}
-              </div>
-            </div>
-
-            <div className="p-4 rounded-lg bg-zinc-800/70">
-              <span className="text-lg font-semibold">Why This Risk:</span>
-              {reasons.length > 0 ? (
-                <ul className="mt-2 space-y-1 text-sm text-zinc-300 list-disc list-inside">
-                  {reasons.map((reason, idx) => (
-                    <li key={`${service}-reason-${idx}`}>{reason}</li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="mt-2 text-sm text-zinc-400">No risk factors yet.</div>
-              )}
-            </div>
-
-            <div className="p-4 rounded-lg bg-zinc-800/70">
-              <span className="text-lg font-semibold">Suggested Fixes:</span>
-              {recommendations.length > 0 ? (
-                <ul className="mt-2 space-y-1 text-sm text-zinc-300 list-disc list-inside">
-                  {recommendations.map((recommendation, idx) => (
-                    <li key={`${service}-recommendation-${idx}`}>{recommendation}</li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="mt-2 text-sm text-zinc-400">No remediation suggestions yet.</div>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-6 p-4 rounded-lg bg-zinc-800/70">
-              <div>
-                <span className="font-semibold">First Error:</span>{" "}
-                <span className="font-mono text-zinc-300">
-                  {summary?.first_error_timestamp?.[service] || "N/A"}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold">Last Error:</span>{" "}
-                <span className="font-mono text-zinc-300">
-                  {summary?.latest_error_timestamp?.[service] || "N/A"}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <span className="text-lg font-semibold">Recent Errors:</span>
-              <ul className="mt-3 space-y-3">
-                {(summary?.recent_errors?.[service]?.length ?? 0) > 0 ? (
-                  summary!.recent_errors[service].map((err: any, idx: number) => (
-                    <li
-                      key={idx}
-                      className="p-3 border rounded-lg bg-zinc-900/80 border-zinc-800"
-                    >
-                      <div className="font-mono text-sm text-red-300 break-all">
-                        {err.line || "No message"}
-                      </div>
-                      <div className="mt-1 text-xs text-zinc-400">
-                        <span className="mr-2">
-                          Type: <span className="font-mono text-zinc-300">{err.error_type || "N/A"}</span>
-                        </span>
-                        <span className="mr-2">
-                          Severity: <span className="font-mono text-zinc-300">{err.severity_level || "N/A"}</span>
-                        </span>
-                        <span>
-                          Time: <span className="font-mono text-zinc-300">{err.timestamp || "N/A"}</span>
-                        </span>
-                      </div>
-                    </li>
-                  ))
-                ) : (
-                  <li className="text-zinc-400">No recent errors.</li>
-                )}
-              </ul>
-            </div>
-
-            <div className="h-10" />
-          </div>
+          </StatCard>
+          <StatCard label="Trend">
+            <span className={`flex items-center gap-1 ${tCfg.text}`}>
+              <TIcon className="size-3.5" />{tCfg.label}
+            </span>
+          </StatCard>
+          <StatCard label="Confidence">
+            <span className="text-zinc-100">{Math.round(confidence * 100)}%</span>
+          </StatCard>
         </div>
+
+        {/* Failure prediction */}
+        {willFail && (
+          <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20">
+            <IconAlertTriangle className="size-4 text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-300">Failure predicted</p>
+              <p className="text-xs text-red-400/80 mt-0.5">
+                {etaMins ? `Estimated within ~${etaMins} minutes` : "Imminent — no ETA available"}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Severity distribution */}
+        {severDist && Object.keys(severDist).length > 0 && (
+          <Section title="Severity distribution" icon={IconActivityHeartbeat}>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(severDist).map(([lvl, cnt]) => (
+                <div key={lvl} className="flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1">
+                  <span className={`text-xs font-mono font-bold ${SEVERITY_TEXT[lvl] ?? "text-zinc-400"}`}>{lvl}</span>
+                  <span className="text-xs text-zinc-400">{String(cnt)}</span>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* Most common error */}
+        {topError && (
+          <Section title="Most common error" icon={IconBug}>
+            <div className="rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2.5 font-mono text-xs text-red-300 break-all">
+              {topError}
+            </div>
+          </Section>
+        )}
+
+        {/* Risk factors */}
+        {reasons.length > 0 && (
+          <Section title="Why this risk" icon={IconAlertCircle}>
+            <ul className="space-y-1.5">
+              {reasons.map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-zinc-300">
+                  <span className="mt-1.5 size-1.5 rounded-full bg-orange-400 shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
+
+        {/* Recommendations */}
+        {recs.length > 0 && (
+          <Section title="Suggested fixes" icon={IconBulb}>
+            <ul className="space-y-1.5">
+              {recs.map((r, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-zinc-300">
+                  <span className="mt-1.5 size-1.5 rounded-full bg-blue-400 shrink-0" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
+
+        {/* Timestamps */}
+        {(firstErr || lastErr) && (
+          <Section title="Error window" icon={IconClock}>
+            <div className="grid grid-cols-1 gap-1.5 text-xs text-zinc-400 font-mono">
+              {firstErr && <span><span className="text-zinc-600">First: </span>{fmt(firstErr)}</span>}
+              {lastErr  && <span><span className="text-zinc-600">Last:  </span>{fmt(lastErr)}</span>}
+            </div>
+          </Section>
+        )}
+
+        {/* Recent errors */}
+        <Section title={`Recent errors${recentErrs.length ? ` (${recentErrs.length})` : ""}`} icon={IconBug}>
+          {recentErrs.length === 0 ? (
+            <p className="text-sm text-zinc-600">No recent errors.</p>
+          ) : (
+            <ul className="space-y-2">
+              {recentErrs.map((err, i) => (
+                <li key={i} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2.5">
+                  <p className="font-mono text-xs text-red-300 break-all leading-relaxed">
+                    {err.line || "No message"}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-zinc-500">
+                    {err.error_type    && <span>type: <span className="text-zinc-400 font-mono">{err.error_type}</span></span>}
+                    {err.severity_level && <span>severity: <span className="text-zinc-400 font-mono">{err.severity_level}</span></span>}
+                    {err.timestamp     && <span>{fmt(err.timestamp)}</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <div className="h-4" />
       </div>
     </div>
   );
