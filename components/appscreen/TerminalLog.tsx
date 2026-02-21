@@ -1,90 +1,105 @@
-import React, { useEffect, useRef, useState } from "react";
+"use client";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { backendAPI, type Log } from "@/lib/api/backend-api";
 
 interface TerminalLogProps {
-  url: string;
+  appId: string;
+  userId: string;
 }
 
-export function TerminalLog({ url }: TerminalLogProps) {
-  const [logs, setLogs] = useState<string[]>([]);
-  const logRef = useRef<HTMLDivElement>(null);
+const LEVEL_COLORS: Record<string, string> = {
+  INFO: "text-green-400",
+  DEBUG: "text-blue-400",
+  WARNING: "text-yellow-400",
+  ERROR: "text-red-400",
+  CRITICAL: "text-red-600",
+};
 
-  useEffect(() => {
-    let eventSource: EventSource | null = null;
-    if (url) {
-      const logUrl = url.endsWith("/") ? `${url}logs/stream` : `${url}/logs/stream`;
-      console.log("TerminalLog streaming from:", logUrl); // Debug print
-      eventSource = new EventSource(logUrl);
-      eventSource.onmessage = (event) => {
-        if (event.data && event.data.trim() !== "") {
-          setLogs(prev => [...prev, event.data.replace(/^data:\s*/, "")]);
-        }
-      };
-      eventSource.onerror = () => {
-        setLogs(prev => [...prev, "Error streaming logs"]);
-        eventSource?.close();
-      };
+const POLL_MS = 3000;
+const MAX_LOGS = 200;
+
+export function TerminalLog({ appId, userId }: TerminalLogProps) {
+  const [logs, setLogs] = useState<Log[]>([]);
+  const seenIds = useRef<Set<string>>(new Set());
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isAtBottom = useRef(true);
+
+  const fetchLogs = useCallback(async () => {
+    try {
+      const { logs: incoming } = await backendAPI.getLogs(appId, userId, { limit: 50 });
+      const newLogs = incoming.filter((l) => !seenIds.current.has(l.id));
+      if (newLogs.length === 0) return;
+      newLogs.forEach((l) => seenIds.current.add(l.id));
+      setLogs((prev) => {
+        const combined = [...prev, ...newLogs].sort(
+          (a, b) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime()
+        );
+        return combined.slice(-MAX_LOGS);
+      });
+    } catch {
+      // silently ignore fetch errors
     }
-    return () => {
-      if (eventSource) eventSource.close();
-    };
-  }, [url]);
+  }, [appId, userId]);
 
   useEffect(() => {
-    if (logRef.current) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
+    fetchLogs();
+    const id = setInterval(fetchLogs, POLL_MS);
+    return () => clearInterval(id);
+  }, [fetchLogs]);
+
+  // auto-scroll only when the user hasn't scrolled up
+  useEffect(() => {
+    const el = containerRef.current;
+    if (el && isAtBottom.current) {
+      el.scrollTop = el.scrollHeight;
     }
   }, [logs]);
 
+  function handleScroll() {
+    const el = containerRef.current;
+    if (!el) return;
+    isAtBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  }
+
+  function formatTime(iso: string) {
+    try {
+      return new Date(iso).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+    } catch {
+      return iso;
+    }
+  }
+
   return (
-    <div className="w-full h-full p-3">
-      <p className="pb-2 text-lg font-bold leading-7 text-white">
-        Streaming Logs
-      </p>
+    <div className="flex flex-col h-full p-4 gap-2">
+      <p className="text-sm font-semibold text-zinc-300 shrink-0">Live Logs</p>
       <div
-        ref={logRef}
-        className="w-full h-full p-4 overflow-y-auto font-mono text-xs bg-[oklch(0.205_0_0)] border rounded-lg shadow-inner border-zinc-700 custom-scrollbar"
-        style={{ minHeight: "24rem", maxHeight: "100%" }}
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto font-mono text-xs bg-black/40 border border-zinc-800 rounded-lg p-3 space-y-0.5"
+        style={{ scrollbarWidth: "none" }}
       >
-        {logs.length > 0
-          ? logs.map((line, idx) => {
-              // Regex to extract parts
-              const timestampMatch = line.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})/);
-              const levelMatch = line.match(/\[(INFO|WARNING|ERROR)\]/);
-              const serviceMatch = line.match(/\[(\w+Service)\]/);
-              const rest = line.replace(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) /,"").replace(/\[(INFO|WARNING|ERROR)\]/,"").replace(/\[(\w+Service)\]/,"").trim();
-              return (
-                <div key={idx} className="flex flex-row flex-wrap items-baseline">
-                  {timestampMatch && (
-                    <span className="mr-2 text-zinc-500">{timestampMatch[1]}</span>
-                  )}
-                  {levelMatch && (
-                    <span className={
-                      levelMatch[1] === "INFO"
-                        ? "text-green-500 font-bold mr-2"
-                        : levelMatch[1] === "WARNING"
-                        ? "text-yellow-400 font-bold mr-2"
-                        : "text-red-500 font-bold mr-2"
-                    }>
-                      [{levelMatch[1]}]
-                    </span>
-                  )}
-                  {serviceMatch && (
-                    <span className="mr-2 font-semibold text-blue-400">[{serviceMatch[1]}]</span>
-                  )}
-                  <span className="text-zinc-200">{rest}</span>
-                </div>
-              );
-            })
-          : <span className="text-zinc-500">No logs yet.</span>}
+        {logs.length === 0 ? (
+          <span className="text-zinc-600">Waiting for logs…</span>
+        ) : (
+          logs.map((log) => (
+            <div key={log.id} className="flex flex-row flex-wrap items-baseline gap-x-2 leading-5">
+              <span className="text-zinc-600 shrink-0">{formatTime(log.logged_at)}</span>
+              <span className={`font-bold shrink-0 ${LEVEL_COLORS[log.level] ?? "text-zinc-400"}`}>
+                {log.level}
+              </span>
+              {log.service && (
+                <span className="text-blue-400 shrink-0">[{log.service}]</span>
+              )}
+              <span className="text-zinc-200 break-all">{log.message}</span>
+            </div>
+          ))
+        )}
       </div>
-      <style jsx>{`
-        .custom-scrollbar {
-          scrollbar-width: none;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </div>
   );
 }
