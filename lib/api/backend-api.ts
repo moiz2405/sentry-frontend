@@ -241,17 +241,22 @@ class BackendAPI {
     return this.request(`/chat/${appId}`, { userId })
   }
 
-  /** Send a message — history is managed server-side. */
-  async chat(
-    appId: string,
-    userId: string,
-    message: string
-  ): Promise<{ answer: string; logs_analyzed: number }> {
-    return this.request(`/chat/${appId}`, {
+  /** Send a message and stream the reply. Returns the raw Response for ReadableStream consumption. */
+  async streamChat(appId: string, userId: string, message: string): Promise<Response> {
+    const url = `${this.baseUrl}/chat/${appId}`
+    const response = await fetch(url, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userId}`,
+      },
       body: JSON.stringify({ message }),
-      userId,
     })
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: "Request failed" }))
+      throw new Error((error as { detail?: string }).detail ?? `HTTP ${response.status}`)
+    }
+    return response
   }
 
   /** Clear the chat history for an app. */

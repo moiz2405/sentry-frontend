@@ -144,10 +144,10 @@ interface LogChatPanelProps { appId: string }
 export function LogChatPanel({ appId }: LogChatPanelProps) {
   const { data: session } = useSession();
   const [messages, setMessages] = useState<StoredMessage[]>([]);
+  const [streamingContent, setStreamingContent] = useState("");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
-  const [logsAnalyzed, setLogsAnalyzed] = useState<number | null>(null);
   const [clearing, setClearing] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -171,36 +171,50 @@ export function LogChatPanel({ appId }: LogChatPanelProps) {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  }, [messages, streamingContent, loading]);
 
-  // ── Send message ──────────────────────────────────────────────────
+  // ── Send message (streaming) ──────────────────────────────────────
   async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
     const userId = session?.user?.id;
     if (!userId) return;
 
-    // Optimistically add user message
     const userMsg: StoredMessage = { role: "user", content: trimmed, ts: new Date().toISOString() };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
+    setStreamingContent("");
 
     try {
-      const res = await backendAPI.chat(appId, userId, trimmed);
-      const assistantMsg: StoredMessage = {
-        role: "assistant",
-        content: res.answer,
-        ts: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-      setLogsAnalyzed(res.logs_analyzed);
+      const response = await backendAPI.streamChat(appId, userId, trimmed);
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accumulated += decoder.decode(value, { stream: true });
+        setStreamingContent(accumulated);
+      }
+
+      // Flush any remaining bytes
+      accumulated += decoder.decode();
+
+      // Commit the finished message and clear the streaming buffer
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: accumulated, ts: new Date().toISOString() },
+      ]);
+      setStreamingContent("");
     } catch (err: unknown) {
       const detail = err instanceof Error ? err.message : "Chat failed";
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: `⚠️ ${detail}`, ts: new Date().toISOString() },
       ]);
+      setStreamingContent("");
     } finally {
       setLoading(false);
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -232,9 +246,7 @@ export function LogChatPanel({ appId }: LogChatPanelProps) {
       {/* ── Header ────────────────────────────────────── */}
       {!isEmpty && (
         <div className="flex items-center justify-between px-1 pb-2 border-b border-zinc-800">
-          <span className="text-xs text-zinc-500">
-            {logsAnalyzed !== null && <>Analyzing <span className="text-zinc-400 font-medium">{logsAnalyzed}</span> log entries</>}
-          </span>
+          <span className="text-xs text-zinc-500" />
           <button
             type="button"
             onClick={handleClear}
@@ -301,17 +313,22 @@ export function LogChatPanel({ appId }: LogChatPanelProps) {
                 </div>
               </div>
             ))}
+            {/* Streaming bubble — shows live text as it arrives */}
             {loading && (
               <div className="flex gap-3 justify-start">
-                <div className="shrink-0 w-7 h-7 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
-                  <IconLoader2 className="size-3.5 text-blue-400 animate-spin" />
+                <div className="shrink-0 w-7 h-7 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mt-0.5">
+                  <IconBolt className="size-3.5 text-blue-400" />
                 </div>
-                <div className="bg-zinc-800/80 border border-zinc-700 rounded-2xl rounded-bl-sm px-4 py-3">
-                  <div className="flex gap-1 items-center h-4">
-                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce [animation-delay:0ms]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce [animation-delay:150ms]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce [animation-delay:300ms]" />
-                  </div>
+                <div className="max-w-[82%] bg-zinc-800/80 border border-zinc-700 rounded-2xl rounded-bl-sm px-4 py-3">
+                  {streamingContent ? (
+                    <MarkdownMessage content={streamingContent} />
+                  ) : (
+                    <div className="flex gap-1 items-center h-4">
+                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce [animation-delay:0ms]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce [animation-delay:150ms]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce [animation-delay:300ms]" />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
