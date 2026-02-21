@@ -121,10 +121,38 @@
   }
 }
 
+/* ── Custom scrollbars (applied globally) ───────────────────────────────── */
+
+/* Webkit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.35 0 0);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.45 0 0);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.35 0 0) transparent;
+}
+
+/* Hide-scrollbar utility (keeps existing usage intact) */
 .hide-scrollbar {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .hide-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
