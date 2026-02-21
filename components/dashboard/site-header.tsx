@@ -33,17 +33,21 @@ export function SiteHeader() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, session?.user?.id]);
 
-  const crumbs = [
-    { name: "Dashboard", href: "/dashboard" },
-    ...segments.map((seg, idx) => {
+  // Build crumbs from segments, skipping segments that are already represented
+  // by the hardcoded "Dashboard" base crumb or have no dedicated page ("my-app")
+  const segmentCrumbs = segments
+    .map((seg, idx) => {
+      if (seg === "dashboard" && idx === 0) return null;
+      if (seg === "my-app" && idx === 0) return null;
       const href = "/" + segments.slice(0, idx + 1).join("/");
-      // If segment is an appId and appName is available, use appName
-      if (appName && segments[0] === "my-app" && idx === 1) {
-        return { name: appName, href };
+      if (segments[0] === "my-app" && idx === 1) {
+        return { name: appName ?? seg, href };
       }
       return { name: seg.charAt(0).toUpperCase() + seg.slice(1), href };
     })
-  ];
+    .filter((c): c is { name: string; href: string } => c !== null);
+
+  const crumbs = [{ name: "Dashboard", href: "/dashboard" }, ...segmentCrumbs];
 
   return (
     <header className="flex shrink-0 items-center gap-2 border-b transition-[width,height] h-16 bg-[oklch(0.205_0_0)] px-0">
