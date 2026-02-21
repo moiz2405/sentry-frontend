@@ -49,6 +49,14 @@ export type Analytics = {
 export type ServiceHealth = "healthy" | "warning" | "unhealthy"
 export type RiskLevel = "low" | "medium" | "high" | "critical"
 
+export type TimelineBucket = {
+  time: string
+  timestamp: string
+  total: number
+  errors: number
+  warnings: number
+}
+
 export type AnomalySeverity = "low" | "medium" | "high" | "critical"
 export type AnomalyType = "error_spike" | "volume_surge" | "new_error_pattern" | "cascade_failure"
 
@@ -271,6 +279,15 @@ class BackendAPI {
   /** Return detected anomalies for an app, newest first. */
   async getAnomalies(appId: string, userId: string): Promise<{ anomalies: Anomaly[] }> {
     return this.request(`/anomalies/${appId}`, { userId })
+  }
+
+  /** Return time-bucketed log counts for the timeline chart. */
+  async getTimeline(
+    appId: string,
+    userId: string,
+    window: "1h" | "6h" | "24h" | "7d" = "1h"
+  ): Promise<{ buckets: TimelineBucket[]; window: string; bucket_size_minutes: number }> {
+    return this.request(`/timeline/${appId}?window=${window}`, { userId })
   }
 
   /** Send a message and stream the reply. Returns the raw Response for ReadableStream consumption. */

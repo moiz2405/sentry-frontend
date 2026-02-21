@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import {
   ResizableHandle,
@@ -7,9 +7,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { ServiceHealthCards } from "@/components/appscreen/ServiceHealthCards";
-import { ChartAreaInteractive } from "@/components/dashboard/chart-area-interactive";
-import { ResponsiveChartWrapper } from "./chartWrapper";
-import { Separator } from "@/components/ui/separator";
+import { LogTimelineChart } from "@/components/appscreen/LogTimelineChart";
 import { ServiceDetailsPanel } from "@/components/appscreen/ServiceDetailsPanel";
 import {
   Empty,
@@ -71,49 +69,50 @@ export function AppScreen({ appId }: AppScreenProps) {
         className="rounded-xl border bg-[oklch(0.205_0_0)] shadow-xl min-h-[540px]"
       >
         <ResizablePanel defaultSize={45} minSize={20}>
-          <div className="relative flex flex-col h-[600px] md:h-[705px] items-start justify-start p-6 gap-4">
-            <h2 className="w-full text-xl font-semibold tracking-tight text-left">
-              Active Microservices
-            </h2>
-            {atRiskCount > 0 ? (
-              <div className="text-sm text-red-300">
-                {atRiskCount} service{atRiskCount > 1 ? "s" : ""} at risk of failure
+          <div className="flex flex-col h-[600px] md:h-[705px] p-5 gap-3">
+            {/* Panel header */}
+            {!selectedService && (
+              <div className="flex items-center justify-between shrink-0">
+                <h2 className="text-sm font-semibold text-zinc-300">Services</h2>
+                {atRiskCount > 0 && (
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-red-400 bg-red-500/10 border border-red-500/20 rounded-full px-2.5 py-0.5">
+                    <span className="size-1.5 rounded-full bg-red-400 animate-pulse" />
+                    {atRiskCount} at risk
+                  </span>
+                )}
               </div>
-            ) : null}
-            <Separator className="my-2" />
-            <div className="w-full">
+            )}
+
+            {/* Content */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
               {selectedService ? (
-                <div className="w-full h-full">
-                  <ServiceDetailsPanel
-                    service={selectedService}
-                    summary={summary}
-                    onBack={() => setSelectedService(null)}
-                  />
+                <ServiceDetailsPanel
+                  service={selectedService}
+                  summary={summary}
+                  onBack={() => setSelectedService(null)}
+                />
+              ) : !summary ? (
+                <div className="flex items-center justify-center h-full">
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <IconFolderCode />
+                      </EmptyMedia>
+                      <EmptyTitle>Waiting for logs</EmptyTitle>
+                      <EmptyDescription>
+                        Install the SDK and send logs. Your dashboard will update automatically.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 </div>
-              ) : (
-                <div className="flex items-center justify-center flex-1 w-full">
-                  {!summary ? (
-                    <Empty>
-                      <EmptyHeader>
-                        <EmptyMedia variant="icon">
-                          <IconFolderCode />
-                        </EmptyMedia>
-                        <EmptyTitle>Waiting for logs</EmptyTitle>
-                        <EmptyDescription>
-                          Install the SDK in your app and send logs. Your dashboard will update automatically.
-                        </EmptyDescription>
-                      </EmptyHeader>
-                    </Empty>
-                  ) : Array.isArray(summary.services) ? (
-                    <ServiceHealthCards
-                      services={summary.services}
-                      serviceHealth={summary.service_health}
-                      atRiskServices={summary.at_risk_services ?? []}
-                      onServiceClick={setSelectedService}
-                    />
-                  ) : null}
-                </div>
-              )}
+              ) : Array.isArray(summary.services) ? (
+                <ServiceHealthCards
+                  services={summary.services}
+                  serviceHealth={summary.service_health}
+                  atRiskServices={summary.at_risk_services ?? []}
+                  onServiceClick={setSelectedService}
+                />
+              ) : null}
             </div>
           </div>
         </ResizablePanel>
@@ -127,13 +126,8 @@ export function AppScreen({ appId }: AppScreenProps) {
             </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel defaultSize={60} minSize={20}>
-              <div className="flex items-stretch justify-center flex-1 w-full h-full p-6">
-                <ResponsiveChartWrapper>
-                  <ChartAreaInteractive
-                    errorRates={summary?.errors_per_10_logs ?? []}
-                    avgErrorRate={summary?.avg_errors_per_10_logs ?? 0}
-                  />
-                </ResponsiveChartWrapper>
+              <div className="flex items-stretch flex-1 w-full h-full p-4">
+                <LogTimelineChart appId={appId} />
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
