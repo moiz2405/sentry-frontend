@@ -28,7 +28,8 @@ function AppDetailContent({ appId }: { appId: string }) {
     } else {
       params.set("tab", t)
     }
-    router.replace(`/my-app/${appId}?${params.toString()}`)
+    const qs = params.toString()
+    router.replace(`/my-app/${appId}${qs ? `?${qs}` : ""}`)
   }
 
   useEffect(() => {
