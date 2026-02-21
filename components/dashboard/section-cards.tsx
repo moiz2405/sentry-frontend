@@ -188,20 +188,24 @@ function AddAppCard({ onClick }: { onClick: () => void }) {
 
 export function SectionCards() {
   const router = useRouter()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [apps, setApps] = useState<App[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (session?.user?.id) {
-      setLoading(true)
-      backendAPI
-        .getApps(session.user.id)
-        .then(setApps)
-        .catch(console.error)
-        .finally(() => setLoading(false))
+    if (status === "loading") return   // still authenticating — wait
+    const userId = session?.user?.id
+    if (!userId) {
+      setLoading(false)                // authenticated but no id — unblock
+      return
     }
-  }, [session?.user?.id])
+    setLoading(true)
+    backendAPI
+      .getApps(userId)
+      .then(setApps)
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [session?.user?.id, status])
 
   if (loading) {
     return (
