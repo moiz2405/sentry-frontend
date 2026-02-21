@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -26,7 +28,10 @@ export function SiteHeader() {
         .then((data) => setAppName(data?.name))
         .catch(() => setAppName(undefined));
     }
-  }, [pathname, segments, session?.user?.id]);
+  // segments is derived from pathname — do not include it in deps to avoid
+  // redundant re-fetches on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, session?.user?.id]);
 
   const crumbs = [
     { name: "Dashboard", href: "/dashboard" },
