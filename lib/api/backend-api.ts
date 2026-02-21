@@ -230,6 +230,24 @@ class BackendAPI {
   }
 
   // ──────────────────────────────────────────────────────────
+  // Log Chat
+  // ──────────────────────────────────────────────────────────
+
+  /** Ask a natural-language question about the app's recent logs. */
+  async chat(
+    appId: string,
+    userId: string,
+    message: string,
+    history: Array<{ role: "user" | "assistant"; content: string }> = []
+  ): Promise<{ answer: string; logs_analyzed: number }> {
+    return this.request(`/chat/${appId}`, {
+      method: "POST",
+      body: JSON.stringify({ message, history }),
+      userId,
+    })
+  }
+
+  // ──────────────────────────────────────────────────────────
   // Health
   // ──────────────────────────────────────────────────────────
 

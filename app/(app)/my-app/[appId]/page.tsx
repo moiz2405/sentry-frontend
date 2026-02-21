@@ -4,12 +4,13 @@ import { useEffect, useState, Suspense, use } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { IconChevronLeft, IconLayoutDashboard, IconSettings } from "@tabler/icons-react"
+import { IconChevronLeft, IconLayoutDashboard, IconSettings, IconMessageCircle } from "@tabler/icons-react"
 import { AppScreen } from "@/components/appscreen/AppScreen"
 import { AppSettings } from "@/components/appscreen/AppSettings"
+import { LogChatPanel } from "@/components/appscreen/LogChatPanel"
 import { backendAPI, type App } from "@/lib/api/backend-api"
 
-type Tab = "dashboard" | "settings"
+type Tab = "dashboard" | "settings" | "ask"
 
 function AppDetailContent({ appId }: { appId: string }) {
   const { data: session, status } = useSession()
@@ -96,6 +97,12 @@ function AppDetailContent({ appId }: { appId: string }) {
           label="Dashboard"
         />
         <TabButton
+          active={tab === "ask"}
+          onClick={() => setTab("ask")}
+          icon={<IconMessageCircle className="size-4" />}
+          label="Ask"
+        />
+        <TabButton
           active={tab === "settings"}
           onClick={() => setTab("settings")}
           icon={<IconSettings className="size-4" />}
@@ -106,6 +113,11 @@ function AppDetailContent({ appId }: { appId: string }) {
       {/* ── Tab content ──────────────────────────────── */}
       <div className="flex-1 mt-4">
         {tab === "dashboard" && <AppScreen appId={appId} />}
+        {tab === "ask" && (
+          <div className="px-4 lg:px-6">
+            <LogChatPanel appId={appId} />
+          </div>
+        )}
         {tab === "settings" && <AppSettings app={app} />}
       </div>
     </div>
