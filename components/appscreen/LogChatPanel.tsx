@@ -229,7 +229,6 @@ export function LogChatPanel({ appId }: LogChatPanelProps) {
     try {
       await backendAPI.clearChat(appId, userId);
       setMessages([]);
-      setLogsAnalyzed(null);
     } finally {
       setClearing(false);
     }
