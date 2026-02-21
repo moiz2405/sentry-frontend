@@ -233,18 +233,30 @@ class BackendAPI {
   // Log Chat
   // ──────────────────────────────────────────────────────────
 
-  /** Ask a natural-language question about the app's recent logs. */
+  /** Fetch the stored chat history for an app. */
+  async getChat(
+    appId: string,
+    userId: string
+  ): Promise<{ messages: Array<{ role: "user" | "assistant"; content: string; ts: string }> }> {
+    return this.request(`/chat/${appId}`, { userId })
+  }
+
+  /** Send a message — history is managed server-side. */
   async chat(
     appId: string,
     userId: string,
-    message: string,
-    history: Array<{ role: "user" | "assistant"; content: string }> = []
+    message: string
   ): Promise<{ answer: string; logs_analyzed: number }> {
     return this.request(`/chat/${appId}`, {
       method: "POST",
-      body: JSON.stringify({ message, history }),
+      body: JSON.stringify({ message }),
       userId,
     })
+  }
+
+  /** Clear the chat history for an app. */
+  async clearChat(appId: string, userId: string): Promise<void> {
+    await this.request(`/chat/${appId}`, { method: "DELETE", userId })
   }
 
   // ──────────────────────────────────────────────────────────
