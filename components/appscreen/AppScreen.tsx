@@ -30,7 +30,7 @@ const POLL_INTERVAL_MS = 5000;
 type ChartMode = "live" | "history";
 
 export function AppScreen({ appId }: AppScreenProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [selectedService, setSelectedService] = useState<string | null>(null);
@@ -38,13 +38,19 @@ export function AppScreen({ appId }: AppScreenProps) {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Live chart accumulation — only appended when backend reports a new generated_at
-  const lastGeneratedAt = useRef<string | null>(null);
+  const lastGeneratedAt   = useRef<string | null>(null);
+  const lastNewDataAt     = useRef<number>(Date.now());  // wall-clock ms of last real batch
   const [liveErrorRates, setLiveErrorRates] = useState<number[]>([]);
   const [liveAvgRate, setLiveAvgRate] = useState(0);
 
+  // Idle decay: when no new log batch has arrived for IDLE_DECAY_MS, append
+  // a 0-rate point every POLL_INTERVAL_MS so the chart gracefully trends down.
+  const IDLE_DECAY_MS = 5 * 60 * 1000;   // 5 min silence → start decaying
+
   useEffect(() => {
+    if (status === "loading") return;  // still authenticating — wait
     const userId = session?.user?.id;
-    if (!userId) return;
+    if (!userId) { setLoading(false); return; }  // no id — unblock
 
     setLoading(true);
     function fetchSummary() {
@@ -53,15 +59,24 @@ export function AppScreen({ appId }: AppScreenProps) {
         .then(({ summary: s }) => {
           if (s) {
             setSummary(s);
-            // Only append to live chart when a genuinely new batch arrived
             const genAt = (s as DashboardSummary & { generated_at?: string }).generated_at ?? null;
             if (genAt && genAt !== lastGeneratedAt.current) {
+              // Genuine new batch — append its error rates
               lastGeneratedAt.current = genAt;
+              lastNewDataAt.current   = Date.now();
               const rates: number[] = s.errors_per_10_logs ?? [];
               if (rates.length > 0) {
                 setLiveErrorRates(prev => [...prev, ...rates]);
                 setLiveAvgRate(s.avg_errors_per_10_logs ?? 0);
               }
+            } else if (Date.now() - lastNewDataAt.current > IDLE_DECAY_MS) {
+              // No new batch for 5 min → append a 0 so the chart decays
+              setLiveErrorRates(prev => {
+                if (prev.length === 0) return prev;
+                // Only append 0 if the last value wasn't already 0
+                const last = prev[prev.length - 1];
+                return last === 0 ? prev : [...prev, 0];
+              });
             }
           }
           setLoading(false);
@@ -71,6 +86,7 @@ export function AppScreen({ appId }: AppScreenProps) {
 
     // Reset live chart data when switching apps
     lastGeneratedAt.current = null;
+    lastNewDataAt.current   = Date.now();
     setLiveErrorRates([]);
     setLiveAvgRate(0);
 
