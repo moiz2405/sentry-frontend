@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import {
   IconSettings,
   IconTrash,
@@ -162,7 +162,9 @@ export function SectionCards() {
       setLoading(true)
       backendAPI
         .getApps(session.user.id)
-        .then(setApps)
+        .then((apps) => {
+          setApps(apps)
+        })
         .catch((err) => console.error("Failed to load apps:", err))
         .finally(() => setLoading(false))
     }
