@@ -35,24 +35,12 @@ export const description = "An interactive area chart"
 export function ChartAreaInteractive({ errorRates, avgErrorRate }: { errorRates: number[]; avgErrorRate: number }) {
   const isMobile = useIsMobile();
   const [timeRange, setTimeRange] = React.useState("90d");
-  const [allErrorRates, setAllErrorRates] = React.useState<number[]>([]);
-  const [allAvgRates, setAllAvgRates] = React.useState<number[]>([]);
 
-  // Append new errorRates and avgErrorRate as they arrive
-  React.useEffect(() => {
-    if (errorRates && errorRates.length > 0) {
-      setAllErrorRates(prev => [...prev, ...errorRates]);
-    }
-    if (typeof avgErrorRate === "number") {
-      setAllAvgRates(prev => [...prev, avgErrorRate]);
-    }
-  }, [errorRates, avgErrorRate]);
-
-  // Prepare chart data
-  let chartData = allErrorRates.map((rate, idx) => ({
+  // errorRates is already the fully accumulated series from AppScreen
+  let chartData = errorRates.map((rate, idx) => ({
     batch: idx + 1,
     errorRate: rate,
-    avgErrorRate: allAvgRates[idx] ?? avgErrorRate,
+    avgErrorRate: avgErrorRate,
   }));
 
   // Only prepend 0 point if there is at least one real data point

@@ -37,6 +37,11 @@ export function AppScreen({ appId }: AppScreenProps) {
   const [chartMode, setChartMode] = useState<ChartMode>("live");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Live chart accumulation — only appended when backend reports a new generated_at
+  const lastGeneratedAt = useRef<string | null>(null);
+  const [liveErrorRates, setLiveErrorRates] = useState<number[]>([]);
+  const [liveAvgRate, setLiveAvgRate] = useState(0);
+
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
@@ -46,11 +51,28 @@ export function AppScreen({ appId }: AppScreenProps) {
       backendAPI
         .getSummary(appId, userId!)
         .then(({ summary: s }) => {
-          if (s) setSummary(s);
+          if (s) {
+            setSummary(s);
+            // Only append to live chart when a genuinely new batch arrived
+            const genAt = (s as DashboardSummary & { generated_at?: string }).generated_at ?? null;
+            if (genAt && genAt !== lastGeneratedAt.current) {
+              lastGeneratedAt.current = genAt;
+              const rates: number[] = s.errors_per_10_logs ?? [];
+              if (rates.length > 0) {
+                setLiveErrorRates(prev => [...prev, ...rates]);
+                setLiveAvgRate(s.avg_errors_per_10_logs ?? 0);
+              }
+            }
+          }
           setLoading(false);
         })
         .catch(() => setLoading(false));
     }
+
+    // Reset live chart data when switching apps
+    lastGeneratedAt.current = null;
+    setLiveErrorRates([]);
+    setLiveAvgRate(0);
 
     fetchSummary();
     pollRef.current = setInterval(fetchSummary, POLL_INTERVAL_MS);
@@ -165,8 +187,8 @@ export function AppScreen({ appId }: AppScreenProps) {
                 <div className="flex-1 min-h-0">
                   {chartMode === "live" ? (
                     <ChartAreaInteractive
-                      errorRates={summary?.errors_per_10_logs ?? []}
-                      avgErrorRate={summary?.avg_errors_per_10_logs ?? 0}
+                      errorRates={liveErrorRates}
+                      avgErrorRate={liveAvgRate}
                     />
                   ) : (
                     <LogTimelineChart appId={appId} />
