@@ -4,13 +4,14 @@ import { useEffect, useState, Suspense, use } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { IconChevronLeft, IconLayoutDashboard, IconSettings, IconMessageCircle } from "@tabler/icons-react"
+import { IconChevronLeft, IconLayoutDashboard, IconSettings, IconMessageCircle, IconAlertTriangle } from "@tabler/icons-react"
 import { AppScreen } from "@/components/appscreen/AppScreen"
 import { AppSettings } from "@/components/appscreen/AppSettings"
+import { AnomalyPanel } from "@/components/appscreen/AnomalyPanel"
 import { LogChatPanel } from "@/components/appscreen/LogChatPanel"
 import { backendAPI, type App } from "@/lib/api/backend-api"
 
-type Tab = "dashboard" | "settings" | "ask"
+type Tab = "dashboard" | "anomalies" | "ask" | "settings"
 
 function AppDetailContent({ appId }: { appId: string }) {
   const { data: session, status } = useSession()
@@ -69,32 +70,26 @@ function AppDetailContent({ appId }: { appId: string }) {
 
   return (
     <div className="flex flex-col min-h-0">
-      {/* ── App header ───────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 pt-5 pb-0 lg:px-6">
-        <div className="flex items-center gap-3 min-w-0">
-          <Link
-            href="/dashboard"
-            className="shrink-0 p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
-            title="All apps"
-          >
-            <IconChevronLeft className="size-4" />
-          </Link>
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold text-zinc-100 truncate">{app.name}</h1>
-            {app.description && (
-              <p className="text-xs text-zinc-400 truncate">{app.description}</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Tab bar ──────────────────────────────────── */}
-      <div className="flex items-center gap-1 px-4 mt-4 lg:px-6 border-b border-zinc-800">
+      {/* ── Tab bar (with back button inline) ────────── */}
+      <div className="flex items-center gap-1 px-4 pt-2 lg:px-6 border-b border-zinc-800">
+        <Link
+          href="/dashboard"
+          className="shrink-0 p-1.5 mr-1 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+          title="All apps"
+        >
+          <IconChevronLeft className="size-4" />
+        </Link>
         <TabButton
           active={tab === "dashboard"}
           onClick={() => setTab("dashboard")}
           icon={<IconLayoutDashboard className="size-4" />}
           label="Dashboard"
+        />
+        <TabButton
+          active={tab === "anomalies"}
+          onClick={() => setTab("anomalies")}
+          icon={<IconAlertTriangle className="size-4" />}
+          label="Anomalies"
         />
         <TabButton
           active={tab === "ask"}
@@ -111,14 +106,11 @@ function AppDetailContent({ appId }: { appId: string }) {
       </div>
 
       {/* ── Tab content ──────────────────────────────── */}
-      <div className="flex-1 mt-4">
-        {tab === "dashboard" && <AppScreen appId={appId} />}
-        {tab === "ask" && (
-          <div className="px-4 lg:px-6">
-            <LogChatPanel appId={appId} />
-          </div>
-        )}
-        {tab === "settings" && <AppSettings app={app} />}
+      <div className={`flex-1 min-h-0 ${tab === "ask" ? "" : "mt-4"} ${tab === "anomalies" || tab === "ask" ? "px-4 lg:px-6" : ""}`}>
+        {tab === "dashboard"  && <AppScreen appId={appId} />}
+        {tab === "anomalies"  && <AnomalyPanel appId={appId} />}
+        {tab === "ask"        && <LogChatPanel appId={appId} />}
+        {tab === "settings"   && <AppSettings app={app} />}
       </div>
     </div>
   )

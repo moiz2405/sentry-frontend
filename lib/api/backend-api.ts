@@ -48,6 +48,20 @@ export type Analytics = {
 
 export type ServiceHealth = "healthy" | "warning" | "unhealthy"
 export type RiskLevel = "low" | "medium" | "high" | "critical"
+
+export type AnomalySeverity = "low" | "medium" | "high" | "critical"
+export type AnomalyType = "error_spike" | "volume_surge" | "new_error_pattern" | "cascade_failure"
+
+export type Anomaly = {
+  id: string
+  detected_at: string
+  type: AnomalyType
+  severity: AnomalySeverity
+  title: string
+  summary: string
+  services_affected: string[]
+  evidence: Record<string, unknown>
+}
 export type RiskTrend = "increasing" | "stable" | "decreasing" | "insufficient_data"
 
 export type DashboardSummary = {
@@ -175,6 +189,19 @@ class BackendAPI {
     })
   }
 
+  /** Update mutable fields (name, description) for an app. */
+  async updateApp(
+    appId: string,
+    userId: string,
+    data: { name?: string; description?: string; url?: string }
+  ): Promise<App> {
+    return this.request<App>(`/apps/${appId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+      userId,
+    })
+  }
+
   /** Delete an app. */
   async deleteApp(appId: string, userId: string): Promise<{ status: string; app_id: string }> {
     return this.request(`/apps/${appId}`, { method: "DELETE", userId })
@@ -239,6 +266,11 @@ class BackendAPI {
     userId: string
   ): Promise<{ messages: Array<{ role: "user" | "assistant"; content: string; ts: string }> }> {
     return this.request(`/chat/${appId}`, { userId })
+  }
+
+  /** Return detected anomalies for an app, newest first. */
+  async getAnomalies(appId: string, userId: string): Promise<{ anomalies: Anomaly[] }> {
+    return this.request(`/anomalies/${appId}`, { userId })
   }
 
   /** Send a message and stream the reply. Returns the raw Response for ReadableStream consumption. */
