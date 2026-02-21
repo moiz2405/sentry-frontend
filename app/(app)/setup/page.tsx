@@ -49,14 +49,110 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
   )
 }
 
-// ─── Code Block ─────────────────────────────────────────────
-const LANG_META: Record<string, { label: string; pill: string }> = {
-  bash:       { label: "bash",       pill: "bg-emerald-950 text-emerald-300 border-emerald-800/60" },
-  python:     { label: "python",     pill: "bg-blue-950   text-blue-300   border-blue-800/60"  },
-  yaml:       { label: "yaml",       pill: "bg-yellow-950 text-yellow-300 border-yellow-800/60" },
-  dockerfile: { label: "dockerfile", pill: "bg-cyan-950   text-cyan-300   border-cyan-800/60"  },
-  env:        { label: ".env",       pill: "bg-purple-950 text-purple-300 border-purple-800/60" },
+// ─── Dracula theme ───────────────────────────────────────────
+const D = {
+  bg:       "#282a36",
+  header:   "#21222c",
+  border:   "#44475a",
+  fg:       "#f8f8f2",
+  comment:  "#6272a4",
+  cyan:     "#8be9fd",
+  green:    "#50fa7b",
+  orange:   "#ffb86c",
+  pink:     "#ff79c6",
+  purple:   "#bd93f9",
+  red:      "#ff5555",
+  yellow:   "#f1fa8c",
 }
+
+// ─── Syntax tokenizer ────────────────────────────────────────
+type Rule = [RegExp, string]
+
+const LANG_RULES: Record<string, Rule[]> = {
+  python: [
+    [/"""[\s\S]*?"""|'''[\s\S]*?'''/g, D.yellow],
+    [/f?"(?:[^"\\]|\\.)*"|f?'(?:[^'\\]|\\.)*'/g, D.yellow],
+    [/#.*/g, D.comment],
+    [/\b(False|None|True|and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield)\b/g, D.pink],
+    [/@[\w.]+/g, D.green],
+    [/\b(self|cls)\b/g, D.orange],
+    [/\b(print|len|range|str|int|float|list|dict|set|tuple|bool|type|super|isinstance|hasattr|getattr|setattr|open|enumerate|zip|map|filter|repr)\b/g, D.cyan],
+    [/\b\w+(?=\s*\()/g, D.green],
+    [/\b\d+(?:\.\d+)?\b/g, D.purple],
+  ],
+  bash: [
+    [/#.*/g, D.comment],
+    [/"(?:[^"\\]|\\.)*"|'[^']*'/g, D.yellow],
+    [/\$\{?[\w]+\}?/g, D.purple],
+    [/--?[\w][\w-]*/g, D.cyan],
+    [/\b(pip|pip3|python|python3|uvicorn|gunicorn|celery|sentry-logger|docker|curl|wget|cat|echo)\b/g, D.green],
+    [/\b\d+\b/g, D.purple],
+  ],
+  yaml: [
+    [/#.*/g, D.comment],
+    [/"(?:[^"\\]|\\.)*"|'[^']*'/g, D.yellow],
+    [/\b(true|false|null|yes|no)\b/g, D.purple],
+    [/\$\{[\w]+\}/g, D.purple],
+    [/^[ \t]*[\w-]+(?=\s*:)/gm, D.cyan],
+    [/\b\d+(?:\.\d+)?\b/g, D.purple],
+  ],
+  dockerfile: [
+    [/#.*/g, D.comment],
+    [/"(?:[^"\\]|\\.)*"/g, D.yellow],
+    [/\$\{?[\w]+\}?/g, D.purple],
+    [/^(FROM|RUN|COPY|CMD|ENV|EXPOSE|WORKDIR|ARG|LABEL|USER|VOLUME|ADD|ENTRYPOINT|HEALTHCHECK|STOPSIGNAL|ONBUILD|SHELL)\b/gm, D.pink],
+  ],
+  env: [
+    [/#.*/g, D.comment],
+    [/^[\w]+(?==)/gm, D.cyan],
+    [/(?<==).+/gm, D.yellow],
+  ],
+}
+
+function highlight(code: string, lang: string): React.ReactNode {
+  const rules = LANG_RULES[lang]
+  if (!rules) return <>{code}</>
+
+  type Span = { s: number; e: number; color: string }
+  const spans: Span[] = []
+  const used = new Uint8Array(code.length)
+
+  for (const [re, color] of rules) {
+    const gr = new RegExp(re.source, re.flags.replace(/[^gm]/g, "") + (re.flags.includes("g") ? "" : "g") + (re.flags.includes("m") ? "" : "m"))
+    let m: RegExpExecArray | null
+    gr.lastIndex = 0
+    while ((m = gr.exec(code)) !== null) {
+      const s = m.index, e = s + m[0].length
+      if (e <= s) { gr.lastIndex++; continue }
+      let ok = true
+      for (let i = s; i < e; i++) if (used[i]) { ok = false; break }
+      if (ok) {
+        spans.push({ s, e, color })
+        for (let i = s; i < e; i++) used[i] = 1
+      }
+    }
+  }
+
+  spans.sort((a, b) => a.s - b.s)
+
+  const parts: React.ReactNode[] = []
+  let pos = 0
+  for (const { s, e, color } of spans) {
+    if (s > pos) parts.push(<span key={`t${pos}`} style={{ color: D.fg }}>{code.slice(pos, s)}</span>)
+    parts.push(<span key={`h${s}`} style={{ color }}>{code.slice(s, e)}</span>)
+    pos = e
+  }
+  if (pos < code.length) parts.push(<span key={`t${pos}`} style={{ color: D.fg }}>{code.slice(pos)}</span>)
+  return <>{parts}</>
+}
+
+// ─── Code Block ─────────────────────────────────────────────
+const LANG_LABEL: Record<string, string> = {
+  bash: "bash", python: "python", yaml: "yaml", dockerfile: "dockerfile", env: ".env",
+}
+
+// Traffic-light dot colors (macOS style)
+const DOTS = ["#ff5f57", "#febc2e", "#28c840"]
 
 function CodeBlock({
   code,
@@ -69,36 +165,42 @@ function CodeBlock({
   filename?: string
   primary?: boolean
 }) {
-  const meta = LANG_META[language] ?? { label: language, pill: "bg-zinc-800 text-zinc-400 border-zinc-700" }
+  const label = LANG_LABEL[language] ?? language
   return (
-    <div className={cn(
-      "rounded-xl overflow-hidden border bg-zinc-950",
-      primary ? "border-zinc-600 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]" : "border-zinc-700/80"
-    )}>
-      {/* Header bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-700/80 bg-zinc-900">
-        <div className="flex items-center gap-2.5">
-          {/* Three dot decoration */}
-          <div className="flex gap-1 mr-1">
-            <span className="size-2.5 rounded-full bg-zinc-700" />
-            <span className="size-2.5 rounded-full bg-zinc-700" />
-            <span className="size-2.5 rounded-full bg-zinc-700" />
+    <div
+      className={cn("rounded-xl overflow-hidden", primary ? "ring-1 ring-white/10" : "")}
+      style={{ border: `1px solid ${primary ? "#6272a4" : D.border}` }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-4 py-2.5"
+        style={{ background: D.header, borderBottom: `1px solid ${D.border}` }}
+      >
+        <div className="flex items-center gap-3">
+          {/* Traffic lights */}
+          <div className="flex gap-1.5">
+            {DOTS.map((c, i) => (
+              <span key={i} className="size-3 rounded-full inline-block" style={{ background: c }} />
+            ))}
           </div>
           {filename && (
-            <span className="text-xs font-mono font-medium text-zinc-300">{filename}</span>
+            <span className="text-xs font-mono font-medium" style={{ color: "#cdd6f4" }}>{filename}</span>
           )}
-          <span className={cn(
-            "text-[11px] font-semibold px-1.5 py-0.5 rounded border tracking-wide",
-            meta.pill
-          )}>
-            {meta.label}
+          <span
+            className="text-[11px] font-bold px-2 py-0.5 rounded tracking-wide uppercase"
+            style={{ background: "#44475a", color: D.comment }}
+          >
+            {label}
           </span>
         </div>
         <CopyButton text={code} />
       </div>
       {/* Code */}
-      <pre className="px-5 py-4 text-sm font-mono text-zinc-100 overflow-x-auto leading-relaxed whitespace-pre">
-        {code}
+      <pre
+        className="px-5 py-4 text-sm font-mono overflow-x-auto leading-relaxed whitespace-pre"
+        style={{ background: D.bg, color: D.fg }}
+      >
+        {highlight(code, language)}
       </pre>
     </div>
   )
