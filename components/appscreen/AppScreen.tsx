@@ -17,7 +17,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { IconFolderCode, IconActivity, IconChartBar } from "@tabler/icons-react";
+import { IconFolderCode, IconActivity, IconChartBar, IconNetwork, IconCode, IconTerminal2, IconArrowRight, IconSettings2 } from "@tabler/icons-react";
 import { backendAPI, type DashboardSummary } from "@/lib/api/backend-api";
 import { TerminalLog } from "@/components/appscreen/TerminalLog";
 
@@ -38,8 +38,8 @@ export function AppScreen({ appId }: AppScreenProps) {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Live chart accumulation — only appended when backend reports a new generated_at
-  const lastGeneratedAt   = useRef<string | null>(null);
-  const lastNewDataAt     = useRef<number>(Date.now());  // wall-clock ms of last real batch
+  const lastGeneratedAt = useRef<string | null>(null);
+  const lastNewDataAt = useRef<number>(Date.now());  // wall-clock ms of last real batch
   const [liveErrorRates, setLiveErrorRates] = useState<number[]>([]);
   const [liveAvgRate, setLiveAvgRate] = useState(0);
 
@@ -63,7 +63,7 @@ export function AppScreen({ appId }: AppScreenProps) {
             if (genAt && genAt !== lastGeneratedAt.current) {
               // Genuine new batch — append its error rates
               lastGeneratedAt.current = genAt;
-              lastNewDataAt.current   = Date.now();
+              lastNewDataAt.current = Date.now();
               const rates: number[] = s.errors_per_10_logs ?? [];
               if (rates.length > 0) {
                 setLiveErrorRates(prev => [...prev, ...rates]);
@@ -86,7 +86,7 @@ export function AppScreen({ appId }: AppScreenProps) {
 
     // Reset live chart data when switching apps
     lastGeneratedAt.current = null;
-    lastNewDataAt.current   = Date.now();
+    lastNewDataAt.current = Date.now();
     setLiveErrorRates([]);
     setLiveAvgRate(0);
 
@@ -98,6 +98,7 @@ export function AppScreen({ appId }: AppScreenProps) {
         pollRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId, session?.user?.id]);
 
   const atRiskCount = Array.isArray(summary?.at_risk_services)
@@ -134,18 +135,41 @@ export function AppScreen({ appId }: AppScreenProps) {
                   onBack={() => setSelectedService(null)}
                 />
               ) : !summary ? (
-                <div className="flex items-center justify-center h-full">
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <IconFolderCode />
-                      </EmptyMedia>
-                      <EmptyTitle>Waiting for logs</EmptyTitle>
-                      <EmptyDescription>
-                        Install the SDK and send logs. Your dashboard will update automatically.
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
+                <div className="flex items-center justify-center h-full min-h-[400px] p-6">
+                  <div className="max-w-sm w-full space-y-5">
+                    {/* Header */}
+                    <div className="flex flex-col items-center text-center gap-2">
+                      <div className="size-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                        <IconActivity className="size-6 text-blue-400" />
+                      </div>
+                      <h3 className="text-base font-black text-zinc-100 tracking-tight">Waiting for your first log</h3>
+                      <p className="text-[12px] text-zinc-500 leading-relaxed">
+                        Once logs arrive, this Dashboard shows live service health, error rates, and performance metrics across all your services.
+                      </p>
+                    </div>
+
+                    {/* Steps */}
+                    <div className="space-y-2">
+                      {[
+                        { icon: IconSettings2, step: "1", text: "Go to Settings → copy your API key" },
+                        { icon: IconTerminal2, step: "2", text: "pip install sentry-logger-sdk" },
+                        { icon: IconCode, step: "3", text: "Call init(api_key=\"...\") in your app" },
+                      ].map(({ icon: Icon, step, text }) => (
+                        <div key={step} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800">
+                          <span className="size-5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-black flex items-center justify-center shrink-0">{step}</span>
+                          <Icon className="size-3.5 text-zinc-500 shrink-0" />
+                          <span className="text-[12px] text-zinc-400 font-medium">{text}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <a
+                      href="?tab=settings"
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[13px] font-bold transition-colors shadow-lg shadow-blue-500/20"
+                    >
+                      Go to Settings <IconArrowRight className="size-4" />
+                    </a>
+                  </div>
                 </div>
               ) : Array.isArray(summary.services) ? (
                 <ServiceHealthCards
@@ -175,11 +199,10 @@ export function AppScreen({ appId }: AppScreenProps) {
                     <button
                       type="button"
                       onClick={() => setChartMode("live")}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${
-                        chartMode === "live"
-                          ? "bg-zinc-700 text-zinc-100 font-medium"
-                          : "text-zinc-500 hover:text-zinc-300"
-                      }`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${chartMode === "live"
+                        ? "bg-zinc-700 text-zinc-100 font-medium"
+                        : "text-zinc-500 hover:text-zinc-300"
+                        }`}
                     >
                       <IconActivity className="size-3" />
                       Live
@@ -187,11 +210,10 @@ export function AppScreen({ appId }: AppScreenProps) {
                     <button
                       type="button"
                       onClick={() => setChartMode("history")}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${
-                        chartMode === "history"
-                          ? "bg-zinc-700 text-zinc-100 font-medium"
-                          : "text-zinc-500 hover:text-zinc-300"
-                      }`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${chartMode === "history"
+                        ? "bg-zinc-700 text-zinc-100 font-medium"
+                        : "text-zinc-500 hover:text-zinc-300"
+                        }`}
                     >
                       <IconChartBar className="size-3" />
                       History
