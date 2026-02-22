@@ -10,7 +10,7 @@
  */
 
 const BACKEND_URL = (
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:9000"
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8002"
 ).replace(/\/$/, "")
 
 // ============================================================
@@ -102,6 +102,13 @@ export type DashboardSummary = {
   latest_error_timestamp: Record<string, string>
   errors_per_10_logs: number[]
   avg_errors_per_10_logs: number
+}
+
+export type ReplaySession = {
+  session_id: string
+  app_id: string
+  started_at: string
+  event_count: number
 }
 
 export type SyncUserPayload = {
@@ -311,6 +318,20 @@ class BackendAPI {
   /** Clear the chat history for an app. */
   async clearChat(appId: string, userId: string): Promise<void> {
     await this.request(`/chat/${appId}`, { method: "DELETE", userId })
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // Session Replay
+  // ──────────────────────────────────────────────────────────
+
+  /** List all recorded replay sessions for an app. */
+  async listReplaySessions(appId: string, userId: string): Promise<{ sessions: ReplaySession[] }> {
+    return this.request(`/replay/${appId}/sessions`, { userId })
+  }
+
+  /** Fetch all rrweb events for a specific session so the player can render the video. */
+  async getReplayEvents(appId: string, sessionId: string, userId: string): Promise<{ session_id: string; events: any[]; event_count: number }> {
+    return this.request(`/replay/${appId}/sessions/${sessionId}`, { userId })
   }
 
   // ──────────────────────────────────────────────────────────
