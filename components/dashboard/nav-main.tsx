@@ -25,13 +25,13 @@ export function NavMain() {
 
   const navItems = [
     { label: "Dashboard", path: "/dashboard", icon: IconLayoutDashboard, accent: "blue" },
-    { label: "Add App",   path: "/register",  icon: IconCirclePlus,      accent: "violet" },
-    { label: "Setup Guide", path: "/setup",   icon: IconRocket,          accent: "emerald" },
+    { label: "Add App", path: "/register", icon: IconCirclePlus, accent: "violet" },
+    { label: "Setup Guide", path: "/setup", icon: IconRocket, accent: "emerald" },
   ] as const
 
   const accentClasses: Record<string, { active: string; hover: string }> = {
-    blue:    { active: "bg-blue-600/20 text-blue-300 border border-blue-500/30",    hover: "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60" },
-    violet:  { active: "bg-violet-600/20 text-violet-300 border border-violet-500/30", hover: "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60" },
+    blue: { active: "bg-blue-600/20 text-blue-300 border border-blue-500/30", hover: "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60" },
+    violet: { active: "bg-violet-600/20 text-violet-300 border border-violet-500/30", hover: "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60" },
     emerald: { active: "bg-emerald-600/20 text-emerald-300 border border-emerald-500/30", hover: "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60" },
   }
 
