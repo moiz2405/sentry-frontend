@@ -51,18 +51,18 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
 
 // ─── Dracula theme ───────────────────────────────────────────
 const D = {
-  bg:       "#282a36",
-  header:   "#21222c",
-  border:   "#44475a",
-  fg:       "#f8f8f2",
-  comment:  "#6272a4",
-  cyan:     "#8be9fd",
-  green:    "#50fa7b",
-  orange:   "#ffb86c",
-  pink:     "#ff79c6",
-  purple:   "#bd93f9",
-  red:      "#ff5555",
-  yellow:   "#f1fa8c",
+  bg: "#282a36",
+  header: "#21222c",
+  border: "#44475a",
+  fg: "#f8f8f2",
+  comment: "#6272a4",
+  cyan: "#8be9fd",
+  green: "#50fa7b",
+  orange: "#ffb86c",
+  pink: "#ff79c6",
+  purple: "#bd93f9",
+  red: "#ff5555",
+  yellow: "#f1fa8c",
 }
 
 // ─── Syntax tokenizer ────────────────────────────────────────
@@ -414,14 +414,14 @@ services:
     build: .
     environment:
       - SENTRY_API_KEY=\${SENTRY_API_KEY}
-      - SENTRY_INGEST_URL=http://sentry-backend:9000
+      - SENTRY_INGEST_URL=http://sentry-backend:8002
     depends_on:
       - sentry-backend
 
   sentry-backend:
-    image: your-sentry-backend-image
+    image: python:3.11-slim
     ports:
-      - "9000:9000"`}
+      - "8002:8002"`}
           language="yaml"
           filename="docker-compose.yml"
           primary
@@ -454,7 +454,7 @@ logging.info("Container started")`}
           primary
         />
         <Callout type="tip">
-          For multi-container setups, set <IC>SENTRY_INGEST_URL</IC> to the internal Docker service name (e.g. <IC>http://sentry-backend:9000</IC>) so containers communicate directly.
+          For multi-container setups, set <IC>SENTRY_INGEST_URL</IC> to the internal Docker service name (e.g. <IC>http://sentry-backend:8002</IC>) so containers communicate directly.
         </Callout>
       </Step>
 
@@ -476,7 +476,8 @@ services:
     restart: unless-stopped
     environment:
       - SENTRY_API_KEY=\${SENTRY_API_KEY}
-      - SENTRY_INGEST_URL=http://backend:9000
+      - PYTHONUNBUFFERED=1
+      - SENTRY_INGEST_URL=http://backend:8002
     depends_on:
       backend:
         condition: service_healthy
@@ -484,15 +485,15 @@ services:
   backend:
     image: sentry-backend:latest
     ports:
-      - "9000:9000"
+      - "8002:8002"
     environment:
       - DATABASE_URL=\${DATABASE_URL}
       - SUPABASE_URL=\${SUPABASE_URL}
-      - SUPABASE_KEY=\${SUPABASE_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=\${SUPABASE_SERVICE_ROLE_KEY}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
       retries: 5`}
             language="yaml"
             filename="docker-compose.yml"
@@ -588,8 +589,9 @@ function EnvTab() {
           </p>
           <CodeBlock
             code={`# .env
-SENTRY_API_KEY=sk_your-api-key-here
-SENTRY_INGEST_URL=http://localhost:9000
+SENTRY_API_KEY=sk_your_api_key_here
+SENTRY_INGEST_URL=http://localhost:8002
+SENTRY_DEBUG=1
 
 # Optional tuning
 SENTRY_BATCH_SIZE=50
@@ -631,15 +633,12 @@ init()  # reads SENTRY_API_KEY and SENTRY_INGEST_URL automatically`}
           </p>
           <CodeBlock
             code={`import os
-from sentry_logger import init
+import sentry_sdk
 
-init(
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_INGEST_URL", "http://localhost:8002"),
     api_key=os.getenv("SENTRY_API_KEY"),
-    dsn=os.getenv("SENTRY_INGEST_URL", "http://localhost:9000"),
-    batch_size=int(os.getenv("SENTRY_BATCH_SIZE", "50")),
-    flush_interval_seconds=float(os.getenv("SENTRY_FLUSH_INTERVAL", "5.0")),
-    redirect_print=os.getenv("SENTRY_REDIRECT_PRINT", "true").lower() == "true",
-    capture_exceptions=os.getenv("SENTRY_CAPTURE_EXCEPTIONS", "true").lower() == "true",
+    debug=True
 )`}
             language="python"
             filename="main.py"
