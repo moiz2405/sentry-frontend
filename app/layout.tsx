@@ -32,6 +32,20 @@ export default function RootLayout({
         >
           <Toaster richColors position="top-right" theme="dark" />
           {children}
+          {/* Inject Sentry Session Replay Native Browser SDK for tracking */}
+          <script src="/sdk/sentry-replay.min.js" defer></script>
+          <script dangerouslySetInnerHTML={{
+            __html: `
+            window.addEventListener('load', function() {
+              if (window.SentryReplay && window.SentryReplay.initReplay) {
+                 window.SentryReplay.initReplay({
+                    dsn: 'http://localhost:8002',
+                    appId: 'frontend-service'
+                 });
+                 console.log("[SentryReplay] Injected into Layout successfully");
+              }
+            });
+          `}} />
         </body>
       </SessionProvider>
     </html>
