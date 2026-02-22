@@ -35,8 +35,9 @@ export default function DefaultLayout({ children }: { children?: React.ReactNode
         if (result?.id && result.id !== u.id) {
           update({ canonicalId: result.id })
         }
-      }).catch(() => {})
+      }).catch(() => { })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id])
 
   return (
