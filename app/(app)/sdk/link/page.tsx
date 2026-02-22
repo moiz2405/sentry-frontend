@@ -14,7 +14,7 @@ function SdkLinkContent() {
   const [done, setDone] = useState(false);
 
   const backendBase = useMemo(
-    () => (process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:9000").replace(/\/$/, ""),
+    () => (process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8002").replace(/\/$/, ""),
     []
   );
 
